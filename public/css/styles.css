@@ -1,129 +1,108 @@
-* {
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, "segoe ui", roboto, oxygen, ubuntu, cantarell, "fira sans", "droid sans", "helvetica neue", Arial, sans-serif;
-    font-size: 16px;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
+/* --- Estilos Generales --- */
 body {
-    background-color: #fc7d1c;
-}
-.login {
-    width: 400px;
-    background-color: #ffffff;
-    box-shadow: 0 0 9px 0 rgba(0, 0, 0, 0.3);
-    margin: 100px auto;
-}
-.login h1 {
-    text-align: center;
-    color: #5b6574;
-    font-size: 24px;
-    padding: 20px 0 20px 0;
-    border-bottom: 1px solid #dee0e4;
-}
-.login form {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding-top: 20px;
-}
-.login form label {
+    font-family: Arial, sans-serif;
+    background-color: #f0f2f5;
+    margin: 0;
+    padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 50px;
-    height: 50px;
-    background-color: darkblue;
-    color: #ffffff;
-}
-.login form input[type="password"], .login form input[type="text"] {
-    width: 310px;
-    height: 50px;
-    border: 1px solid #dee0e4;
-    margin-bottom: 20px;
-    padding: 0 15px;
-}
-.login form input[type="submit"] {
-    width: 100%;
-    padding: 15px;
-   margin-top: 20px;
-    background-color: darkblue;
-    border: 0;
-    cursor: pointer;
-    font-weight: bold;
-    color: #ffffff;
-    transition: background-color 0.2s;
-}
-.login form input[type="submit"]:hover {
-  background-color: darkblue;
-    transition: background-color 0.2s;
+    min-height: 100vh;
 }
 
-.navtop {
-	background-color: darkblue;
-	height: 60px;
-	width: 100%;
-	border: 0;
+/* --- Contenedor del Login --- */
+.login-container {
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
 }
-.navtop div {
-	display: flex;
-	margin: 0 auto;
-	width: 1000px;
-	height: 100%;
+
+.login-container h1 {
+    margin-bottom: 1.5rem;
+    color: #333;
 }
-.navtop div h1, .navtop div a {
-	display: inline-flex;
-	align-items: center;
+
+/* --- Formularios --- */
+.form-group {
+    margin-bottom: 1rem;
+    text-align: left;
 }
-.navtop div h1 {
-	flex: 1;
-	font-size: 24px;
-	padding: 0;
-	margin: 0;
-	color: #eaebed;
-	font-weight: normal;
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #555;
 }
-.navtop div a {
-	padding: 0 20px;
-	text-decoration: none;
-	color: #c1c4c8;
-	font-weight: bold;
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box; /* Importante para que el padding no afecte el ancho */
 }
-.navtop div a i {
-	padding: 2px 8px 0 0;
+
+/* --- Botones --- */
+.btn-login {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
 }
-.navtop div a:hover {
-	color: #eaebed;
+
+.btn-login:hover {
+    background-color: #0056b3;
 }
-body.loggedin {
-	background-color: #f3f4f7;
+
+/* --- Mensajes de Error/Éxito --- */
+.mensaje {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
 }
-.content {
-	width: 1000px;
-	margin: 0 auto;
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
 }
-.content h2 {
-	margin: 0;
-	padding: 25px 0;
-	font-size: 22px;
-	border-bottom: 1px solid #e0e0e3;
-	color: #4a536e;
+
+/* --- Contenedor del Dashboard --- */
+.dashboard-container {
+    background-color: #ffffff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 800px;
+    text-align: left;
 }
-.content > p, .content > div {
-	box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
-	margin: 25px 0;
-	padding: 25px;
-	background-color: #fff;
+
+.dashboard-container h1 {
+    color: #333;
 }
-.content > p table td, .content > div table td {
-	padding: 5px;
+
+.dashboard-container p {
+    font-size: 1.1rem;
+    color: #555;
 }
-.content > p table td:first-child, .content > div table td:first-child {
-	font-weight: bold;
-	color: #4a536e;
-	padding-right: 15px;
+
+.dashboard-container a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
 }
-.content > div p {
-	padding: 5px;
-	margin: 0 0 10px 0;
+
+.dashboard-container a:hover {
+    text-decoration: underline;
 }

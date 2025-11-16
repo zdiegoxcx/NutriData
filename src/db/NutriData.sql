@@ -12,26 +12,12 @@ CREATE TABLE Rol (
     Nombre VARCHAR(255)
 ) ENGINE=InnoDB;
 
-CREATE TABLE Permiso (
-    Id INT AUTO_INCREMENT PRIMARY KEY,
-    Nombre VARCHAR(255),
-    Descripcion TEXT
-) ENGINE=InnoDB;
-
 -- Tablas de primer nivel de dependencia
 CREATE TABLE Comuna (
     Id INT AUTO_INCREMENT PRIMARY KEY,
     Comuna VARCHAR(255),
     Id_Region INT,
     FOREIGN KEY (Id_Region) REFERENCES Region(Id)
-) ENGINE=InnoDB;
-
-CREATE TABLE Rol_Permiso (
-    Id_Rol INT,
-    Id_Permiso INT,
-    PRIMARY KEY (Id_Rol, Id_Permiso),
-    FOREIGN KEY (Id_Rol) REFERENCES Rol(Id),
-    FOREIGN KEY (Id_Permiso) REFERENCES Permiso(Id)
 ) ENGINE=InnoDB;
 
 CREATE TABLE Usuario (
