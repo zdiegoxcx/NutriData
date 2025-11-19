@@ -1,6 +1,22 @@
 # NutriData
 Proyecto final ing. Software
 
+
+
+Intrucciones para Matias Rivas⛹️‍♂️:
+
+1-. hacer un git pull apenas empiezes a trabajar, usa git stash si es que no tienes nada para subir (Obviamente en git bush)
+
+2-. Una vez que empizas a trabajar y quieres subir tus cambios segir las intrucciones:
+
+2.1-. Añadir tus cambios con: git add .
+
+2.2-. Hacer el commit con: git commit -m "aqui debe ir el commit, ej: commit v4.1.2"
+
+2.3-. Subir a la rama main: git push origin main 
+
+
+
 Importante para probar la conexión con la BD 👀👀:
 
 (Importante: la carpeta se debe copiar en c:\xampp\htdocs\)
