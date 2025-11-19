@@ -13,7 +13,7 @@ Intrucciones para Matias Rivas⛹️‍♂️:
 
 2.2-. Hacer el commit con: git commit -m "aqui debe ir el commit, ej: commit v4.1.2"
 
-2.3-. Subir a la rama main: git push origin main 
+2.3-. Subir a la rama main: git push origin main o git push, cualquiera que te funcione
 
 
 
