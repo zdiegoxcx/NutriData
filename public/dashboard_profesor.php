@@ -174,10 +174,10 @@ $id_estudiante = $_GET['id_estudiante'] ?? null;
                 echo '</div>';
 
                 $stmt = $pdo->prepare("
-                    SELECT Fecha, Peso, Altura, IMC, Observaciones
-                    FROM Medicion
+                    SELECT FechaMedicion as Fecha, Peso, Altura, IMC, Observaciones
+                    FROM RegistroNutricional
                     WHERE Id_Estudiante = ?
-                    ORDER BY Fecha DESC
+                    ORDER BY FechaMedicion DESC
                 ");
                 $stmt->execute([$id_estudiante]);
 
