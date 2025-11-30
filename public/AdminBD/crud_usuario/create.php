@@ -10,7 +10,8 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') 
 }
 
 $errores = [];
-$rut = $nombre = $apellido = $email = $telefono = $contrasena = $rol_id = $estado = '';
+$rut = $nombre = $apellido = $email = $telefono = $contrasena = $rol_id = '';
+// $estado ya no necesita inicializarse vacío porque lo forzaremos a 1
 
 // --- OBTENER ROLES PARA EL SELECT ---
 $roles = $pdo->query("SELECT Id, Nombre FROM Rol ORDER BY Nombre")->fetchAll(PDO::FETCH_ASSOC);
@@ -24,7 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $telefono = trim($_POST['telefono']);
     $contrasena = $_POST['contrasena']; // Sin trim para contraseñas
     $rol_id = $_POST['rol_id'];
-    $estado = $_POST['estado']; // 1 o 0
+    
+    // --- CAMBIO AQUÍ: Forzar estado a 1 (Activo) ---
+    $estado = 1; 
 
     // Validaciones básicas
     if (empty($rut)) { $errores[] = "El RUT es obligatorio."; }
@@ -47,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $sql = "INSERT INTO Usuario (Id_Rol, Rut, Nombre, Apellido, Contraseña, Telefono, Email, Estado) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            // NOTA: Contraseña en texto plano como solicitaste. En prod usar password_hash()
+            // Se pasa la variable $estado que ahora vale 1
             $stmt->execute([$rol_id, $rut, $nombre, $apellido, $contrasena, $telefono, $email, $estado]);
 
             $_SESSION['success_message'] = "Usuario creado exitosamente.";
@@ -101,7 +104,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <form action="create.php" method="POST" class="crud-form">
                         
-                        <!-- Fila 1: RUT y Rol -->
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex: 1;">
                                 <label for="rut">RUT:</label>
@@ -120,7 +122,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
 
-                        <!-- Fila 2: Nombre y Apellido -->
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex: 1;">
                                 <label for="nombre">Nombre:</label>
@@ -132,7 +133,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
 
-                        <!-- Fila 3: Email y Teléfono -->
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex: 1;">
                                 <label for="email">Email:</label>
@@ -144,19 +144,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
 
-                        <!-- Fila 4: Contraseña y Estado -->
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex: 1;">
                                 <label for="contrasena">Contraseña:</label>
                                 <input type="password" id="contrasena" name="contrasena" required>
                             </div>
-                            <div class="form-group" style="flex: 1;">
-                                <label for="estado">Estado:</label>
-                                <select id="estado" name="estado" required>
-                                    <option value="1" <?php echo ($estado === '1' || $estado === '') ? 'selected' : ''; ?>>Activo</option>
-                                    <option value="0" <?php echo ($estado === '0') ? 'selected' : ''; ?>>Inactivo</option>
-                                </select>
-                            </div>
+                            <div style="flex: 1;"></div> 
                         </div>
 
                         <div class="form-actions" style="margin-top: 20px;">
