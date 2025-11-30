@@ -111,7 +111,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                         // ---------------------------------
                         echo '<div class="content-header-with-btn">';
                         echo "<h1><i class='fa-solid fa-users'></i> Gestión de Usuarios</h1>";
-                        echo '<a href="crud_usuario/create.php" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Usuario</a>';
+                        echo '<a href="AdminBD/crud_usuario/create.php" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Usuario</a>';
                         echo '</div>'; // Fin content-header-with-btn
                         
                         $stmt = $pdo->query("SELECT u.Id, u.Rut, u.Nombre, u.Apellido, u.Email, u.Estado, r.Nombre AS NombreRol 
@@ -132,8 +132,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                             echo "<td>" . htmlspecialchars($row['NombreRol']) . "</td>";
                             echo "<td>" . $estado . "</td>";
                             echo '<td class="actions">';
-                            echo '<a href="crud_usuario/edit.php?id='.$row['Id'].'" class="btn-action btn-edit" title="Editar"><i class="fa-solid fa-pencil"></i></a>';
-                            echo '<a href="javascript:void(0);" onclick="confirmDelete(\'usuario\', '.$row['Id'].', \''.htmlspecialchars($row['Nombre'] . ' ' . $row['Apellido']).'\')" class="btn-action btn-delete" title="Eliminar"><i class="fa-solid fa-trash-can"></i></a>';
+                            echo '<a href="AdminBD/crud_usuario/edit.php?id='.$row['Id'].'" class="btn-action btn-edit" title="Editar"><i class="fa-solid fa-pencil"></i></a>';
                             echo '</td>';
                             echo "</tr>";
                         }
@@ -168,7 +167,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                             // --- VISTA 3: Mostrar Estudiantes de un Curso ---
                             echo '<div class="content-header-with-btn">';
                             echo "<h1><i class='fa-solid fa-children'></i> Estudiantes del Curso</h1>";
-                            echo '<a href="crud_estudiante/create.php?id_curso='.$id_curso.'" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Estudiante</a>';
+                            echo '<a href="AdminBD/crud_estudiante/create.php?id_curso='.$id_curso.'" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Estudiante</a>';
                             echo '</div>'; // Fin content-header-with-btn
                             
                             $stmt = $pdo->prepare("SELECT Id, Rut, Nombre, Apellido, FechaNacimiento, Estado FROM Estudiante WHERE Id_Curso = ? ORDER BY Apellido, Nombre");
@@ -186,7 +185,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                                 echo "<td>" . htmlspecialchars($row['FechaNacimiento']) . "</td>";
                                 echo "<td>" . $estado . "</td>";
                                 echo '<td class="actions">';
-                                echo '<a href="crud_estudiante/edit.php?id='.$row['Id'].'" class="btn-action btn-edit" title="Editar"><i class="fa-solid fa-pencil"></i></a>';
+                                echo '<a href="AdminBD/crud_estudiante/edit.php?id='.$row['Id'].'" class="btn-action btn-edit" title="Editar"><i class="fa-solid fa-pencil"></i></a>';
                                 echo '<a href="javascript:void(0);" onclick="confirmDelete(\'estudiante\', '.$row['Id'].', \''.htmlspecialchars($row['Nombre'] . ' ' . $row['Apellido']).'\', \''.$id_establecimiento.'\', \''.$id_curso.'\')" class="btn-action btn-delete" title="Eliminar"><i class="fa-solid fa-trash-can"></i></a>';
                                 echo '</td>';
                                 echo "</tr>";
@@ -198,7 +197,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                             // --- VISTA 2: Mostrar Cursos de un Establecimiento ---
                             echo '<div class="content-header-with-btn">';
                             echo "<h1><i class='fa-solid fa-chalkboard-user'></i> Cursos del Establecimiento</h1>";
-                            echo '<a href="crud_curso/create.php?id_establecimiento='.$id_establecimiento.'" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Curso</a>';
+                            echo '<a href="AdminBD/crud_curso/create.php?id_establecimiento='.$id_establecimiento.'" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Curso</a>';
                             echo '</div>'; // Fin content-header-with-btn
                             
                             $stmt = $pdo->prepare("SELECT c.Id, c.Nombre, u.Nombre AS NombreProfesor, u.Apellido AS ApellidoProfesor 
@@ -217,7 +216,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                                 echo "<td>" . htmlspecialchars($row['NombreProfesor'] . ' ' . $row['ApellidoProfesor']) . "</td>";
                                 echo '<td class="actions">';
                                 echo '<a href="dashboard_admin_bd.php?vista=estudiantes&id_establecimiento='.$id_establecimiento.'&id_curso='.$row['Id'].'" class="btn-action btn-view" title="Ver Estudiantes"><i class="fa-solid fa-eye"></i></a>';
-                                echo '<a href="crud_curso/edit.php?id='.$row['Id'].'" class="btn-action btn-edit" title="Editar"><i class="fa-solid fa-pencil"></i></a>';
+                                echo '<a href="AdminBD/crud_curso/edit.php?id='.$row['Id'].'" class="btn-action btn-edit" title="Editar"><i class="fa-solid fa-pencil"></i></a>';
                                 echo '<a href="javascript:void(0);" onclick="confirmDelete(\'curso\', '.$row['Id'].', \''.htmlspecialchars($row['Nombre']).'\', \''.$id_establecimiento.'\')" class="btn-action btn-delete" title="Eliminar"><i class="fa-solid fa-trash-can"></i></a>';
                                 echo '</td>';
                                 echo "</tr>";
@@ -229,7 +228,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                             // --- VISTA 1: Mostrar todos los Establecimientos (Default) ---
                             echo '<div class="content-header-with-btn">';
                             echo "<h1><i class='fa-solid fa-school'></i> Establecimientos</h1>";
-                            echo '<a href="crud_establecimiento/create.php" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Establecimiento</a>';
+                            echo '<a href="AdminBD/crud_establecimiento/create.php" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Establecimiento</a>';
                             echo '</div>'; // Fin content-header-with-btn
                             
                             $stmt = $pdo->query("SELECT e.Id, e.Nombre, d.Direccion, c.Comuna 
@@ -249,7 +248,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                                 echo "<td>" . htmlspecialchars($row['Comuna'] ?? 'N/A') . "</td>";
                                 echo '<td class="actions">';
                                 echo '<a href="dashboard_admin_bd.php?vista=estudiantes&id_establecimiento='.$row['Id'].'" class="btn-action btn-view" title="Ver Cursos"><i class="fa-solid fa-eye"></i></a>';
-                                echo '<a href="crud_establecimiento/edit.php?id='.$row['Id'].'" class="btn-action btn-edit" title="Editar"><i class="fa-solid fa-pencil"></i></a>';
+                                echo '<a href="AdminBD/crud_establecimiento/edit.php?id='.$row['Id'].'" class="btn-action btn-edit" title="Editar"><i class="fa-solid fa-pencil"></i></a>';
                                 echo '<a href="javascript:void(0);" onclick="confirmDelete(\'establecimiento\', '.$row['Id'].', \''.htmlspecialchars($row['Nombre']).'\')" class="btn-action btn-delete" title="Eliminar"><i class="fa-solid fa-trash-can"></i></a>';
                                 echo '</td>';
                                 echo "</tr>";

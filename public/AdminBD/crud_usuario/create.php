@@ -1,11 +1,11 @@
 <?php
 session_start();
-require_once __DIR__ . '/../../src/config/db.php'; 
+require_once __DIR__ . '/../../../src/config/db.php';
 $pdo = getConnection();
 
 // --- GUARDIÁN DE LA PÁGINA ---
 if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') {
-    header("Location: ../login.php");
+    header("Location: ../../login.php");
     exit;
 }
 
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$rol_id, $rut, $nombre, $apellido, $contrasena, $telefono, $email, $estado]);
 
             $_SESSION['success_message'] = "Usuario creado exitosamente.";
-            header("Location: ../dashboard_admin_bd.php?vista=usuarios");
+            header("Location: ../../dashboard_admin_bd.php?vista=usuarios");
             exit;
         } catch (PDOException $e) {
             $errores[] = "Error al crear usuario: " . $e->getMessage();
@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Crear Usuario</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="../../css/styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h2>DAEM NutriMonitor</h2>
             </div>
             <nav class="sidebar-nav">
-                 <a href="../dashboard_admin_bd.php?vista=usuarios" class="nav-item active"><i class="fa-solid fa-arrow-left"></i> Volver</a>
+                 <a href="../../dashboard_admin_bd.php?vista=usuarios" class="nav-item active"><i class="fa-solid fa-arrow-left"></i> Volver</a>
             </nav>
         </aside>
 
