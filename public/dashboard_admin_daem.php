@@ -77,18 +77,20 @@ foreach ($datos_grafico as $fila) {
 // 3. Tabla de Alertas (Últimos casos de riesgo detectados)
 $sql_alertas = "
     SELECT 
+        a.Id as IdAlerta,
+        a.Estado,
         e.Nombre as Estudiante,
         e.Rut,
         c.Nombre as Curso,
         est.Nombre as Establecimiento,
         r.IMC,
         r.FechaMedicion
-    FROM RegistroNutricional r
+    FROM Alerta a
+    JOIN RegistroNutricional r ON a.Id_RegistroNutricional = r.Id
     JOIN Estudiante e ON r.Id_Estudiante = e.Id
     JOIN Curso c ON e.Id_Curso = c.Id
     JOIN Establecimiento est ON c.Id_Establecimiento = est.Id
-    WHERE r.IMC < 18.5 OR r.IMC >= 25
-    ORDER BY r.FechaMedicion DESC
+    ORDER BY a.Estado DESC, r.FechaMedicion DESC
     LIMIT 10
 ";
 $stmt_alertas = $pdo->query($sql_alertas);
@@ -202,28 +204,39 @@ $stmt_alertas = $pdo->query($sql_alertas);
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Estudiante</th>
+                                            <th>Estado</th> <th>Estudiante</th>
                                             <th>Establecimiento</th>
                                             <th>IMC</th>
                                             <th>Fecha</th>
-                                        </tr>
+                                            <th>Acción</th> </tr>
                                     </thead>
                                     <tbody>
                                         <?php while($alerta = $stmt_alertas->fetch(PDO::FETCH_ASSOC)): 
-                                            $clase_alerta = ($alerta['IMC'] >= 30) ? 'status-inactive' : 'status-active'; // Solo visual
+                                            // Lógica de colores según gravedad
                                             $color_imc = ($alerta['IMC'] >= 30 || $alerta['IMC'] < 16) ? '#dc3545' : '#fd7e14';
+                                            
+                                            // Icono de estado
+                                            $icono_estado = ($alerta['Estado'] == 1) 
+                                                ? '<span class="status-inactive" title="Pendiente">Pendiente</span>' 
+                                                : '<span class="status-active" title="Atendida">Atendida</span>';
                                         ?>
                                         <tr>
+                                            <td><?php echo $icono_estado; ?></td>
                                             <td><?php echo htmlspecialchars($alerta['Estudiante']); ?></td>
                                             <td><?php echo htmlspecialchars($alerta['Establecimiento']); ?></td>
                                             <td style="font-weight: bold; color: <?php echo $color_imc; ?>">
                                                 <?php echo htmlspecialchars($alerta['IMC']); ?>
                                             </td>
                                             <td><?php echo date("d/m/Y", strtotime($alerta['FechaMedicion'])); ?></td>
+                                            <td class="actions">
+                                                <a href="AdminDAEM/gestionar_alerta.php?id=<?php echo $alerta['IdAlerta']; ?>" class="btn-action btn-edit" title="Gestionar Caso">
+                                                    <i class="fa-solid fa-file-pen"></i>
+                                                </a>
+                                            </td>
                                         </tr>
                                         <?php endwhile; ?>
                                         <?php if($stmt_alertas->rowCount() == 0): ?>
-                                            <tr><td colspan="4" style="text-align:center;">No hay alertas recientes.</td></tr>
+                                            <tr><td colspan="6" style="text-align:center;">No hay alertas recientes.</td></tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
