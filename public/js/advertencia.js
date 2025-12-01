@@ -1,15 +1,14 @@
 /**
  * advertencia.js
- * Maneja Modales, Menús y Redirecciones inteligentes.
+ * Maneja Modales (Rojo/Verde), Menús y Redirecciones.
  */
 
 // Variables globales
-let deleteType = '';
-let deleteId = 0;
+let actionType = ''; // 'delete' o 'reactivate'
+let targetId = 0;
 let targetName = '';
+let targetSubType = ''; // 'usuario', 'estudiante', etc.
 
-// CORRECCIÓN: No sobrescribimos la variable si ya viene desde PHP
-// Si window.globalVista no existe, usamos 'estudiantes' por defecto.
 if (typeof globalVista === 'undefined') {
     var globalVista = 'estudiantes'; 
 }
@@ -18,16 +17,18 @@ let currentUrlParams = { est: null, cur: null };
 
 // Elementos del DOM
 const modal = document.getElementById('deleteModal');
+const modalContent = modal.querySelector('.modal-danger'); // El div interno
+const modalTitle = modal.querySelector('h2');
 const inputName = document.getElementById('confirmInput');
 const inputReason = document.getElementById('reasonInput');
-const btnDelete = document.getElementById('btnConfirmDelete');
+const btnConfirm = document.getElementById('btnConfirmDelete'); // Antes btnDelete
 const warningBox = document.getElementById('modalWarning');
 const nameDisplay = document.getElementById('targetNameDisplay');
 const divNameInput = document.getElementById('nameInputContainer');
 const divReasonInput = document.getElementById('reasonInputContainer');
 
 /* ========================================================
-   1. LÓGICA DE MENÚS DESPLEGABLES (TRES PUNTOS)
+   1. LÓGICA DE MENÚS DESPLEGABLES
    ======================================================== */
 function toggleMenu(event, id) {
     event.stopPropagation(); 
@@ -53,43 +54,67 @@ window.addEventListener('click', function(e) {
 });
 
 /* ========================================================
-   2. LÓGICA DE REACTIVACIÓN
+   2. LÓGICA DE MODALES (ELIMINAR Y REACTIVAR)
    ======================================================== */
+
+// Función para abrir modal de REACTIVACIÓN (Verde)
 function confirmReactivate(id, nombre) {
-    if (confirm(`¿Desea reactivar al usuario "${nombre}"?\n\nSe borrará el historial de eliminación y podrá ingresar al sistema nuevamente.`)) {
-        // Usamos la variable globalVista que viene inyectada desde el PHP
-        window.location.href = `dashboard_admin_bd.php?action=reactivar&id=${id}&vista=${globalVista}`;
-    }
+    actionType = 'reactivate';
+    targetId = id;
+    targetName = nombre;
+    
+    // Configurar Estilo VERDE
+    modalContent.classList.remove('modal-danger');
+    modalContent.classList.add('modal-success');
+    
+    // Configurar Textos
+    modalTitle.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Confirmar Reactivación';
+    warningBox.innerHTML = `¿Desea reactivar al usuario <strong>${nombre}</strong>?<br>Se restablecerá su acceso al sistema inmediatamente.`;
+    btnConfirm.innerText = "Reactivar Usuario";
+    
+    // Ocultar Inputs (No necesarios para reactivar)
+    divNameInput.style.display = 'none';
+    divReasonInput.style.display = 'none';
+    
+    // Botón activo por defecto
+    btnConfirm.classList.add('active');
+    
+    modal.style.display = 'flex';
 }
 
-/* ========================================================
-   3. LÓGICA DEL MODAL DE ELIMINACIÓN
-   ======================================================== */
+// Función para abrir modal de ELIMINACIÓN (Rojo)
 function openDeleteModal(tipo, id, nombre, id_establecimiento = null, id_curso = null) {
-    deleteType = tipo;
-    deleteId = id;
+    actionType = 'delete';
+    targetSubType = tipo;
+    targetId = id;
     targetName = nombre;
     currentUrlParams.est = id_establecimiento;
     currentUrlParams.cur = id_curso;
 
+    // Configurar Estilo ROJO
+    modalContent.classList.remove('modal-success');
+    modalContent.classList.add('modal-danger');
+    
+    modalTitle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ¿Estás absolutamente seguro?';
+    btnConfirm.innerText = "Eliminar definitivamente";
+
+    // Resetear Inputs
     if(inputName) inputName.value = '';
     if(inputReason) inputReason.value = '';
-    if(btnDelete) btnDelete.classList.remove('active');
+    btnConfirm.classList.remove('active');
     
-    if(modal) modal.style.display = 'flex';
-
     // Configuración según tipo
     if (tipo === 'estudiante' || tipo === 'usuario') {
         let label = (tipo === 'usuario') ? `Va a desactivar al usuario <strong>${nombre}</strong>.` : `Va a eliminar al estudiante <strong>${nombre}</strong>.`;
         warningBox.innerHTML = `${label}<br>Esta acción requiere un motivo justificativo.`;
         
-        if(divNameInput) divNameInput.style.display = 'none';
-        if(divReasonInput) divReasonInput.style.display = 'block';
+        divNameInput.style.display = 'none';
+        divReasonInput.style.display = 'block';
         if(inputReason) inputReason.focus();
     } else {
         if(nameDisplay) nameDisplay.textContent = nombre;
-        if(divNameInput) divNameInput.style.display = 'block';
-        if(divReasonInput) divReasonInput.style.display = 'none';
+        divNameInput.style.display = 'block';
+        divReasonInput.style.display = 'none';
         if(inputName) inputName.focus();
 
         if (tipo === 'establecimiento') {
@@ -98,34 +123,46 @@ function openDeleteModal(tipo, id, nombre, id_establecimiento = null, id_curso =
             warningBox.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> <strong>PELIGRO:</strong><br>Se borrarán los estudiantes del curso.`;
         }
     }
+    
+    modal.style.display = 'flex';
 }
 
 function closeDeleteModal() {
-    if(modal) modal.style.display = 'none';
+    modal.style.display = 'none';
 }
 
 function validateDeleteInput() {
-    if (deleteType === 'estudiante' || deleteType === 'usuario') {
-        if (inputReason.value.trim().length > 0) btnDelete.classList.add('active');
-        else btnDelete.classList.remove('active');
+    // Solo validamos si estamos eliminando
+    if (actionType === 'reactivate') return;
+
+    if (targetSubType === 'estudiante' || targetSubType === 'usuario') {
+        if (inputReason.value.trim().length > 0) btnConfirm.classList.add('active');
+        else btnConfirm.classList.remove('active');
     } else {
-        if (inputName.value === targetName) btnDelete.classList.add('active');
-        else btnDelete.classList.remove('active');
+        if (inputName.value === targetName) btnConfirm.classList.add('active');
+        else btnConfirm.classList.remove('active');
     }
 }
 
 function executeDelete() {
-    // Usamos globalVista para mantenernos en la pestaña correcta (usuarios o estudiantes)
-    let url = `dashboard_admin_bd.php?action=eliminar&tipo=${deleteType}&id=${deleteId}&vista=${globalVista}`;
-    
-    if (deleteType === 'estudiante' || deleteType === 'usuario') {
-        url += `&motivo=${encodeURIComponent(inputReason.value.trim())}`;
-    } else {
-        if (inputName.value !== targetName) return;
-    }
+    let url = '';
 
-    if (currentUrlParams.est) url += `&id_establecimiento=${currentUrlParams.est}`;
-    if (currentUrlParams.cur) url += `&id_curso=${currentUrlParams.cur}`;
+    if (actionType === 'reactivate') {
+        // Lógica de Reactivación
+        url = `dashboard_admin_bd.php?action=reactivar&id=${targetId}&vista=${globalVista}`;
+    } else {
+        // Lógica de Eliminación
+        url = `dashboard_admin_bd.php?action=eliminar&tipo=${targetSubType}&id=${targetId}&vista=${globalVista}`;
+        
+        if (targetSubType === 'estudiante' || targetSubType === 'usuario') {
+            url += `&motivo=${encodeURIComponent(inputReason.value.trim())}`;
+        } else {
+            if (inputName.value !== targetName) return;
+        }
+
+        if (currentUrlParams.est) url += `&id_establecimiento=${currentUrlParams.est}`;
+        if (currentUrlParams.cur) url += `&id_curso=${currentUrlParams.cur}`;
+    }
     
     window.location.href = url;
 }

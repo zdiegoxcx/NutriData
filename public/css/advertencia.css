@@ -15,36 +15,69 @@
     animation: fadeIn 0.2s;
 }
 
-.modal-danger {
+/* === ESTILOS COMPARTIDOS (LA CAJA BLANCA) === */
+/* Aquí definimos la forma para AMBOS estados (Rojo y Verde) */
+.modal-danger, .modal-success {
     background: #fff;
     padding: 30px;
     border-radius: 12px;
     width: 90%;
     max-width: 500px;
-    border-top: 6px solid #dc3545;
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     text-align: center;
     position: relative;
+    transition: border-color 0.3s;
+    
+    /* Borde base (el color se define abajo) */
+    border-top: 6px solid;
 }
 
+/* === ESTILOS ESPECÍFICOS (LOS COLORES) === */
+
+/* Estado ELIMINAR (Rojo) */
+.modal-danger {
+    border-top-color: #dc3545;
+}
 .modal-danger h2 {
     color: #dc3545;
     margin-bottom: 15px;
     font-size: 1.5rem;
 }
 
+/* Estado REACTIVAR (Verde) */
+.modal-success {
+    border-top-color: #10b981;
+}
+.modal-success h2 {
+    color: #10b981;
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
+
+/* === CAJA DE MENSAJE (WARNING BOX) === */
 .warning-box {
-    background-color: #fff5f5;
-    border: 1px solid #fecaca;
-    color: #c53030;
     padding: 10px;
     border-radius: 6px;
     font-size: 0.9rem;
     margin-bottom: 20px;
     text-align: left;
+    border: 1px solid;
 }
 
-/* GRUPOS DE INPUTS DEL MODAL */
+/* Colores de la caja según el estado padre */
+.modal-danger .warning-box {
+    background-color: #fff5f5;
+    border-color: #fecaca;
+    color: #c53030;
+}
+
+.modal-success .warning-box {
+    background-color: #ecfdf5;
+    border-color: #a7f3d0;
+    color: #065f46;
+}
+
+/* === INPUTS === */
 .input-group-modal {
     margin-bottom: 20px;
     text-align: left;
@@ -65,23 +98,31 @@
     border-radius: 6px;
     font-size: 1rem;
     font-family: inherit;
-    box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
+    box-sizing: border-box;
 }
 
-/* --- REGLA ESPECÍFICA PARA QUE NO SE ESTIRE HACIA EL LADO --- */
 .input-group-modal textarea {
-    resize: vertical; /* Solo permite redimensionar la altura */
-    min-height: 80px; /* Altura mínima */
-    max-height: 200px; /* Altura máxima opcional */
+    resize: vertical;
+    min-height: 80px;
+    max-height: 200px;
 }
 
 .input-group-modal input:focus, 
 .input-group-modal textarea:focus {
-    border-color: #dc3545;
     outline: none;
 }
 
-/* BOTONES DEL MODAL */
+/* Color del focus según estado */
+.modal-danger .input-group-modal input:focus,
+.modal-danger .input-group-modal textarea:focus {
+    border-color: #dc3545;
+}
+
+.modal-success .input-group-modal input:focus {
+    border-color: #10b981;
+}
+
+/* === BOTONES === */
 .modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -98,8 +139,8 @@
     font-weight: 600;
 }
 
+/* Botón de confirmación (Base) */
 .btn-delete-confirm {
-    background: #dc3545;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -108,7 +149,16 @@
     font-weight: 600;
     opacity: 0.5;
     pointer-events: none;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, background-color 0.2s;
+}
+
+/* Color del botón según estado */
+.modal-danger .btn-delete-confirm {
+    background-color: #dc3545;
+}
+
+.modal-success .btn-delete-confirm {
+    background-color: #10b981;
 }
 
 .btn-delete-confirm.active {
@@ -119,14 +169,4 @@
 @keyframes fadeIn {
     from {opacity: 0;}
     to {opacity: 1;}
-}
-
-/* Estilo para acciones positivas en el menú (Reactivar) */
-.dropdown-menu a.success-action {
-    color: #10b981; /* Verde esmeralda */
-    font-weight: 600;
-}
-
-.dropdown-menu a.success-action:hover {
-    background-color: #ecfdf5;
 }

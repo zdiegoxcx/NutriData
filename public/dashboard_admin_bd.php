@@ -194,16 +194,19 @@ if (isset($_GET['action'])) {
 
     <div id="deleteModal" class="modal-overlay">
         <div class="modal-danger">
-            <h2><i class="fa-solid fa-triangle-exclamation"></i> ¿Estás absolutamente seguro?</h2>
+            <h2></h2>
             <div id="modalWarning" class="warning-box"></div>
+            
             <div id="nameInputContainer" class="input-group-modal" style="display:none;">
                 <label>Escribe <span id="targetNameDisplay" style="color:#d63384; user-select: all;"></span> para confirmar:</label>
                 <input type="text" id="confirmInput" onkeyup="validateDeleteInput()" placeholder="Escribe el nombre aquí...">
             </div>
+
             <div id="reasonInputContainer" class="input-group-modal" style="display:none;">
                 <label>Motivo de la acción:</label>
                 <textarea id="reasonInput" rows="3" onkeyup="validateDeleteInput()" placeholder="Escribe el motivo..."></textarea>
             </div>
+
             <div class="modal-actions">
                 <button onclick="closeDeleteModal()" class="btn-cancel-modal">Cancelar</button>
                 <button id="btnConfirmDelete" onclick="executeDelete()" class="btn-delete-confirm">Confirmar</button>
@@ -217,7 +220,7 @@ if (isset($_GET['action'])) {
         // --- SOLUCIÓN PARA PROBLEMA DE "VOLVER ATRÁS" (Cache Buster) ---
         window.addEventListener('pageshow', function(event) {
             if (event.persisted) {
-                window.location.reload(); // Si la página viene del caché (botón atrás), recargarla
+                window.location.reload(); 
             }
         });
     </script>
