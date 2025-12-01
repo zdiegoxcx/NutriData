@@ -7,14 +7,11 @@ session_start();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso - NutriData</title>
-    <!-- CSS con versión dinámica para evitar caché -->
     <link rel="stylesheet" href="css/styles.css?v=<?php echo time(); ?>">
-    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="login-page">
 
-    <!-- Lado Izquierdo (Banner) -->
     <div class="login-banner">
         <div class="banner-content">
             <div style="font-size: 4rem; margin-bottom: 20px;">
@@ -25,17 +22,14 @@ session_start();
         </div>
     </div>
 
-    <!-- Lado Derecho (Formulario) -->
     <div class="login-form-container">
         <div class="login-wrapper">
             
-            <!-- Encabezado (Visible solo en escritorio aquí) -->
             <div class="login-header-desktop">
                 <h2 class="login-title">Bienvenido de nuevo</h2>
                 <p class="login-subtitle">Ingresa tus credenciales para acceder al sistema.</p>
             </div>
 
-            <!-- Encabezado Móvil (Visible solo en celular) -->
             <div class="login-header-mobile">
                 <h1>NutriData</h1>
                 <p>Acceso al Sistema</p>
@@ -53,16 +47,28 @@ session_start();
                 <div class="input-group">
                     <label for="rut">RUT de Usuario</label>
                     <div class="input-wrapper">
-                        <input type="text" id="rut" name="rut" placeholder="Ej: 12345678-9" required autofocus>
+                        <input type="text" id="rut" name="rut" 
+                               placeholder="Ej: 12.345.678-9" 
+                               required autofocus 
+                               maxlength="12"
+                               oninput="darFormatoRut(this)">
                         <i class="fa-solid fa-user"></i>
                     </div>
                 </div>
 
                 <div class="input-group">
                     <label for="contrasena">Contraseña</label>
-                    <div class="input-wrapper">
-                        <input type="password" id="contrasena" name="contrasena" placeholder="Ingresa tu contraseña" required>
+                    <div class="input-wrapper" style="position: relative;">
+                        <input type="password" id="contrasena" name="contrasena" 
+                               placeholder="Ingresa tu contraseña" 
+                               required 
+                               maxlength="50"
+                               style="padding-right: 40px;">
+                        
                         <i class="fa-solid fa-lock"></i>
+
+                        <i class="fa-solid fa-eye" id="togglePassword" 
+                           style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #9ca3af; left: auto;"></i>
                     </div>
                 </div>
 
@@ -77,6 +83,22 @@ session_start();
             </div>
         </div>
     </div>
+
+    <script src="js/formato_rut.js"></script>
+
+    <script>
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#contrasena');
+
+        togglePassword.addEventListener('click', function (e) {
+            // Alternar el atributo type
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            
+            // Alternar el icono del ojo (abierto/tachado)
+            this.classList.toggle('fa-eye-slash');
+        });
+    </script>
 
 </body>
 </html>
