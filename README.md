@@ -1,7 +1,7 @@
 # NutriData
 Proyecto final ing. Software
 
-[🔐 Ver Usuarios y Contraseñas](#-credenciales-de-acceso-datos-de-prueba)
+> [🔐 **Ver Lista de Usuarios y Contraseñas**](usuarios.md)
 
 Intrucciones para Matias Rivas⛹️‍♂️:
 

@@ -47,11 +47,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errores)) {
         try {
+
+            $pass_hashed = password_hash($contrasena, PASSWORD_DEFAULT);
+
             $sql = "INSERT INTO Usuario (Id_Rol, Rut, Nombre, Apellido, Contraseña, Telefono, Email, Estado) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
-            // Se pasa la variable $estado que ahora vale 1
-            $stmt->execute([$rol_id, $rut, $nombre, $apellido, $contrasena, $telefono, $email, $estado]);
+            
+            // Usamos $pass_hashed en lugar de $contrasena
+            $stmt->execute([$rol_id, $rut, $nombre, $apellido, $pass_hashed, $telefono, $email, $estado]);
 
             $_SESSION['success_message'] = "Usuario creado exitosamente.";
             header("Location: ../../dashboard_admin_bd.php?vista=usuarios");

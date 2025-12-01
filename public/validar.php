@@ -37,8 +37,8 @@ $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 // 8. Verificar si se encontró un usuario
 if ($usuario) {
     
-    // 9. Verificar la contraseña (comparación de texto plano)
-    if ($contrasena_ingresada === $usuario['Contraseña']) {
+    // 9. Verificar la contraseña (ahora seguro)
+    if (password_verify($contrasena_ingresada, $usuario['Contraseña'])) {
         
         // 10. Verificar si el usuario está ACTIVO
         if ($usuario['Estado'] == 1) {

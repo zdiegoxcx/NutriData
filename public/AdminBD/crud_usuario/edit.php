@@ -43,8 +43,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             if (!empty($nueva_contrasena)) {
+                // ENCRIPTAR LA NUEVA CONTRASEÑA
+                $pass_hashed = password_hash($nueva_contrasena, PASSWORD_DEFAULT);
+
                 $sql = "UPDATE Usuario SET Id_Rol=?, Rut=?, Nombre=?, Apellido=?, Email=?, Telefono=?, Contraseña=? WHERE Id=?";
-                $pdo->prepare($sql)->execute([$rol_id, $rut, $nombre, $apellido, $email, $telefono, $nueva_contrasena, $id_usuario]);
+                // Usamos $pass_hashed
+                $pdo->prepare($sql)->execute([$rol_id, $rut, $nombre, $apellido, $email, $telefono, $pass_hashed, $id_usuario]);
             } else {
                 $sql = "UPDATE Usuario SET Id_Rol=?, Rut=?, Nombre=?, Apellido=?, Email=?, Telefono=? WHERE Id=?";
                 $pdo->prepare($sql)->execute([$rol_id, $rut, $nombre, $apellido, $email, $telefono, $id_usuario]);
