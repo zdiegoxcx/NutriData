@@ -120,3 +120,13 @@
     from {opacity: 0;}
     to {opacity: 1;}
 }
+
+/* Estilo para acciones positivas en el menú (Reactivar) */
+.dropdown-menu a.success-action {
+    color: #10b981; /* Verde esmeralda */
+    font-weight: 600;
+}
+
+.dropdown-menu a.success-action:hover {
+    background-color: #ecfdf5;
+}

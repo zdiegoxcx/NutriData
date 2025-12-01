@@ -9,43 +9,55 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') 
     exit;
 }
 
+// Capturamos la vista actual para mantenerla en redirecciones
 $vista = $_GET['vista'] ?? 'estudiantes'; 
 $id_establecimiento = $_GET['id_establecimiento'] ?? null;
 $id_curso = $_GET['id_curso'] ?? null;
 
 // ======================================================================================
-// LÓGICA DE ELIMINACIÓN
+// LÓGICA DE ACCIONES (ELIMINAR Y REACTIVAR)
 // ======================================================================================
-if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
-    $tipo = $_GET['tipo'] ?? '';
+if (isset($_GET['action'])) {
     $id = $_GET['id'] ?? null;
-    $motivo = $_GET['motivo'] ?? 'Sin motivo especificado.';
+    $accion = $_GET['action'];
 
-    if ($id && $tipo) {
+    if ($id) {
         try {
             $pdo->beginTransaction();
 
-            if ($tipo == 'establecimiento') {
-                $pdo->prepare("UPDATE Establecimiento SET Estado = 0, FechaEliminacion = NOW() WHERE Id = ?")->execute([$id]);
-                $pdo->prepare("UPDATE Curso SET Estado = 0, FechaEliminacion = NOW() WHERE Id_Establecimiento = ?")->execute([$id]);
-                $autoMsg = "Eliminación en cascada: Se eliminó el Establecimiento.";
-                $pdo->prepare("UPDATE Estudiante e INNER JOIN Curso c ON e.Id_Curso = c.Id SET e.Estado = 0, e.FechaEliminacion = NOW(), e.MotivoEliminacion = ? WHERE c.Id_Establecimiento = ?")->execute([$autoMsg, $id]);
-                $_SESSION['success_message'] = "Establecimiento eliminado.";
+            // --- CASO 1: ELIMINAR / DESACTIVAR ---
+            if ($accion == 'eliminar') {
+                $tipo = $_GET['tipo'] ?? '';
+                $motivo = $_GET['motivo'] ?? 'Sin motivo especificado.';
 
-            } elseif ($tipo == 'curso') {
-                $pdo->prepare("UPDATE Curso SET Estado = 0, FechaEliminacion = NOW() WHERE Id = ?")->execute([$id]);
-                $autoMsg = "Eliminación en cascada: Se eliminó el Curso.";
-                $pdo->prepare("UPDATE Estudiante SET Estado = 0, FechaEliminacion = NOW(), MotivoEliminacion = ? WHERE Id_Curso = ?")->execute([$autoMsg, $id]);
-                $_SESSION['success_message'] = "Curso eliminado.";
+                if ($tipo == 'establecimiento') {
+                    $pdo->prepare("UPDATE Establecimiento SET Estado = 0, FechaEliminacion = NOW() WHERE Id = ?")->execute([$id]);
+                    $pdo->prepare("UPDATE Curso SET Estado = 0, FechaEliminacion = NOW() WHERE Id_Establecimiento = ?")->execute([$id]);
+                    $msg = "Eliminación en cascada: Se eliminó el Establecimiento.";
+                    $pdo->prepare("UPDATE Estudiante e INNER JOIN Curso c ON e.Id_Curso = c.Id SET e.Estado = 0, e.FechaEliminacion = NOW(), e.MotivoEliminacion = ? WHERE c.Id_Establecimiento = ?")->execute([$msg, $id]);
+                    $_SESSION['success_message'] = "Establecimiento eliminado.";
 
-            } elseif ($tipo == 'estudiante') {
-                $pdo->prepare("UPDATE Estudiante SET Estado = 0, FechaEliminacion = NOW(), MotivoEliminacion = ? WHERE Id = ?")->execute([$motivo, $id]);
-                $_SESSION['success_message'] = "Estudiante eliminado.";
+                } elseif ($tipo == 'curso') {
+                    $pdo->prepare("UPDATE Curso SET Estado = 0, FechaEliminacion = NOW() WHERE Id = ?")->execute([$id]);
+                    $msg = "Eliminación en cascada: Se eliminó el Curso.";
+                    $pdo->prepare("UPDATE Estudiante SET Estado = 0, FechaEliminacion = NOW(), MotivoEliminacion = ? WHERE Id_Curso = ?")->execute([$msg, $id]);
+                    $_SESSION['success_message'] = "Curso eliminado.";
+
+                } elseif ($tipo == 'estudiante') {
+                    $pdo->prepare("UPDATE Estudiante SET Estado = 0, FechaEliminacion = NOW(), MotivoEliminacion = ? WHERE Id = ?")->execute([$motivo, $id]);
+                    $_SESSION['success_message'] = "Estudiante eliminado.";
+                
+                } elseif ($tipo == 'usuario') {
+                    $pdo->prepare("UPDATE Usuario SET Estado = 0, FechaEliminacion = NOW(), MotivoEliminacion = ? WHERE Id = ?")->execute([$motivo, $id]);
+                    $_SESSION['success_message'] = "Usuario desactivado correctamente.";
+                }
+            }
             
-            } elseif ($tipo == 'usuario') {
-                // AQUÍ AHORA GUARDAMOS EL MOTIVO
-                $pdo->prepare("UPDATE Usuario SET Estado = 0, FechaEliminacion = NOW(), MotivoEliminacion = ? WHERE Id = ?")->execute([$motivo, $id]);
-                $_SESSION['success_message'] = "Usuario desactivado correctamente.";
+            // --- CASO 2: REACTIVAR USUARIO ---
+            elseif ($accion == 'reactivar') {
+                // Reactivamos: Estado 1, Fecha y Motivo NULL
+                $pdo->prepare("UPDATE Usuario SET Estado = 1, FechaEliminacion = NULL, MotivoEliminacion = NULL WHERE Id = ?")->execute([$id]);
+                $_SESSION['success_message'] = "Usuario reactivado exitosamente.";
             }
 
             $pdo->commit();
@@ -54,6 +66,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
             $_SESSION['error'] = "Error: " . $e->getMessage();
         }
         
+        // Redirección inteligente manteniendo la vista
         $redirect = 'dashboard_admin_bd.php?vista=' . $vista;
         if ($id_establecimiento) $redirect .= '&id_establecimiento=' . $id_establecimiento;
         if ($id_curso) $redirect .= '&id_curso=' . $id_curso;
@@ -108,21 +121,30 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                               </tr></thead><tbody>";
                         
                         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                            $estado = $row['Estado'] ? '<span class="status-active">Activo</span>' : '<span class="status-inactive">Inactivo</span>';
-                            // TABLA USUARIOS: NO ES CLICKEABLE (Solo menú de opciones)
-                            echo "<tr>
+                            $es_activo = ($row['Estado'] == 1);
+                            $estado_html = $es_activo ? '<span class="status-active">Activo</span>' : '<span class="status-inactive">Inactivo</span>';
+                            
+                            echo "<tr class='clickable-row'>
                                     <td>".htmlspecialchars($row['Rut'])."</td>
                                     <td>".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."</td>
                                     <td>".htmlspecialchars($row['Email'])."</td>
                                     <td>".htmlspecialchars($row['NombreRol'])."</td>
-                                    <td>$estado</td>
+                                    <td>$estado_html</td>
                                     <td class='menu-column'>
                                         <div class='dropdown'>
                                             <button class='btn-dots' onclick=\"toggleMenu(event, 'u".$row['Id']."')\"><i class='fa-solid fa-ellipsis-vertical'></i></button>
-                                            <div id='menu-u".$row['Id']."' class='dropdown-menu'>
-                                                <a href='AdminBD/crud_usuario/edit.php?id=".$row['Id']."'><i class='fa-solid fa-pencil'></i> Editar</a>
-                                                <a href='javascript:void(0);' class='danger-action' onclick=\"openDeleteModal('usuario', ".$row['Id'].", '".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."')\"><i class='fa-solid fa-ban'></i> Desactivar</a>
-                                            </div>
+                                            <div id='menu-u".$row['Id']."' class='dropdown-menu'>";
+                                            
+                                            // LÓGICA DEL MENÚ: Activo vs Inactivo
+                                            if ($es_activo) {
+                                                echo "<a href='AdminBD/crud_usuario/edit.php?id=".$row['Id']."'><i class='fa-solid fa-pencil'></i> Editar</a>";
+                                                echo "<a href='javascript:void(0);' class='danger-action' onclick=\"openDeleteModal('usuario', ".$row['Id'].", '".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."')\"><i class='fa-solid fa-ban'></i> Desactivar</a>";
+                                            } else {
+                                                echo "<a href='AdminBD/crud_usuario/edit.php?id=".$row['Id']."'><i class='fa-solid fa-eye'></i> Ver Detalle</a>";
+                                                echo "<a href='javascript:void(0);' class='success-action' onclick=\"confirmReactivate(".$row['Id'].", '".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."')\"><i class='fa-solid fa-rotate-left'></i> Reactivar</a>";
+                                            }
+
+                            echo "          </div>
                                         </div>
                                     </td>
                                   </tr>";
@@ -130,7 +152,7 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                         echo "</tbody></table></div>";
 
                     } else {
-                        /* ========================== VISTA ESTABLECIMIENTOS / CURSOS / ESTUDIANTES ========================== */
+                        /* ========================== VISTAS DE ESTRUCTURA ========================== */
                         echo '<nav class="breadcrumbs"><a href="dashboard_admin_bd.php?vista=estudiantes" class="'.(!$id_establecimiento ? 'active' : '').'">Establecimientos</a>';
                         if ($id_establecimiento) {
                             $stmt = $pdo->prepare("SELECT Nombre FROM Establecimiento WHERE Id = ?"); $stmt->execute([$id_establecimiento]);
@@ -143,30 +165,34 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                         echo '</nav>';
 
                         if ($id_establecimiento && $id_curso) {
-                            // --- VISTA 3: ESTUDIANTES (Sin cambios mayores, botones normales) ---
+                            // --- VISTA 3: ESTUDIANTES ---
                             echo '<div class="content-header-with-btn"><h1><i class="fa-solid fa-children"></i> Estudiantes</h1><a href="AdminBD/crud_estudiante/create.php?id_curso='.$id_curso.'" class="btn-create"><i class="fa-solid fa-plus"></i> Crear</a></div>';
                             $stmt = $pdo->prepare("SELECT Id, Rut, Nombre, Apellido, FechaNacimiento FROM Estudiante WHERE Id_Curso = ? AND Estado = 1 ORDER BY Apellido, Nombre");
                             $stmt->execute([$id_curso]);
-                            echo "<div class='table-responsive'><table><thead><tr><th>RUT</th><th>Nombre</th><th>Fecha Nac.</th><th>Acciones</th></tr></thead><tbody>";
+                            echo "<div class='table-responsive'><table><thead><tr><th>RUT</th><th>Nombre</th><th>Fecha Nac.</th><th></th></tr></thead><tbody>";
                             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                                echo "<tr>
+                                echo "<tr class='clickable-row'>
                                         <td>".htmlspecialchars($row['Rut'])."</td>
                                         <td>".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."</td>
                                         <td>".htmlspecialchars($row['FechaNacimiento'])."</td>
-                                        <td class='actions'>
-                                            <a href='AdminBD/crud_estudiante/edit.php?id=".$row['Id']."' class='btn-action btn-edit'><i class='fa-solid fa-pencil'></i></a>
-                                            <a href='javascript:void(0);' onclick=\"openDeleteModal('estudiante', ".$row['Id'].", '".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."', '$id_establecimiento', '$id_curso')\" class='btn-action btn-delete'><i class='fa-solid fa-trash-can'></i></a>
+                                        <td class='menu-column'>
+                                            <div class='dropdown'>
+                                                <button class='btn-dots' onclick=\"toggleMenu(event, 's".$row['Id']."')\"><i class='fa-solid fa-ellipsis-vertical'></i></button>
+                                                <div id='menu-s".$row['Id']."' class='dropdown-menu'>
+                                                    <a href='AdminBD/crud_estudiante/edit.php?id=".$row['Id']."'><i class='fa-solid fa-pencil'></i> Editar</a>
+                                                    <a href='javascript:void(0);' class='danger-action' onclick=\"openDeleteModal('estudiante', ".$row['Id'].", '".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."', '$id_establecimiento', '$id_curso')\"><i class='fa-solid fa-trash-can'></i> Eliminar</a>
+                                                </div>
+                                            </div>
                                         </td>
                                       </tr>";
                             }
                             echo "</tbody></table></div>";
 
                         } else if ($id_establecimiento && !$id_curso) {
-                            // --- VISTA 2: CURSOS (CLICKEABLE + MENÚ) ---
+                            // --- VISTA 2: CURSOS ---
                             echo '<div class="content-header-with-btn"><h1><i class="fa-solid fa-chalkboard-user"></i> Cursos</h1><a href="AdminBD/crud_curso/create.php?id_establecimiento='.$id_establecimiento.'" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Curso</a></div>';
                             $stmt = $pdo->prepare("SELECT c.Id, c.Nombre, u.Nombre AS NProf, u.Apellido AS AProf FROM Curso c JOIN Usuario u ON c.Id_Profesor = u.Id WHERE c.Id_Establecimiento = ? AND c.Estado = 1 ORDER BY c.Nombre");
                             $stmt->execute([$id_establecimiento]);
-                            
                             echo "<div class='table-responsive'><table><thead><tr><th>Curso</th><th>Profesor</th><th></th></tr></thead><tbody>";
                             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                                 $url = "dashboard_admin_bd.php?vista=estudiantes&id_establecimiento=$id_establecimiento&id_curso=".$row['Id'];
@@ -187,10 +213,9 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
                             echo "</tbody></table></div>";
 
                         } else {
-                            // --- VISTA 1: ESTABLECIMIENTOS (CLICKEABLE + MENÚ) ---
+                            // --- VISTA 1: ESTABLECIMIENTOS ---
                             echo '<div class="content-header-with-btn"><h1><i class="fa-solid fa-school"></i> Establecimientos</h1><a href="AdminBD/crud_establecimiento/create.php" class="btn-create"><i class="fa-solid fa-plus"></i> Crear Establecimiento</a></div>';
                             $stmt = $pdo->query("SELECT e.Id, e.Nombre, d.Direccion, c.Comuna FROM Establecimiento e LEFT JOIN Direccion d ON e.Id_Direccion = d.Id LEFT JOIN Comuna c ON d.Id_Comuna = c.Id WHERE e.Estado = 1 ORDER BY e.Nombre");
-                            
                             echo "<div class='table-responsive'><table><thead><tr><th>Establecimiento</th><th>Dirección</th><th>Comuna</th><th></th></tr></thead><tbody>";
                             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                                 $url = "dashboard_admin_bd.php?vista=estudiantes&id_establecimiento=".$row['Id'];
@@ -240,6 +265,10 @@ if (isset($_GET['action']) && $_GET['action'] == 'eliminar') {
         </div>
     </div>
 
+    <script>
+        // Inyectamos la variable de sesión actual al JS
+        var globalVista = '<?php echo $vista; ?>';
+    </script>
     <script src="js/advertencia.js"></script>
 </body>
 </html>
