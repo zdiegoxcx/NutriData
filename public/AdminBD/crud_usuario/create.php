@@ -1,8 +1,6 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../../src/config/db.php';
-
-// AGREGAR ESTA LÍNEA:
 require_once __DIR__ . '/../../../src/config/validaciones.php';
 $pdo = getConnection();
 
@@ -14,25 +12,21 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') 
 
 $errores = [];
 $rut = $nombre = $apellido = $email = $telefono = $contrasena = $rol_id = '';
-// $estado ya no necesita inicializarse vacío porque lo forzaremos a 1
 
 // --- OBTENER ROLES PARA EL SELECT ---
 $roles = $pdo->query("SELECT Id, Nombre FROM Rol ORDER BY Nombre")->fetchAll(PDO::FETCH_ASSOC);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Recibir y limpiar datos
     $rut = trim($_POST['rut']);
     $nombre = trim($_POST['nombre']);
     $apellido = trim($_POST['apellido']);
     $email = trim($_POST['email']);
     $telefono = trim($_POST['telefono']);
-    $contrasena = $_POST['contrasena']; // Sin trim para contraseñas
+    $contrasena = $_POST['contrasena'];
     $rol_id = $_POST['rol_id'];
-    
-    // --- CAMBIO AQUÍ: Forzar estado a 1 (Activo) ---
     $estado = 1; 
 
-// --- BLOQUE DE VALIDACIONES NUEVO ---
+    // --- VALIDACIONES ---
     if (!validarRut($rut)) {
         $errores[] = "El RUT ingresado no es válido.";
     }
@@ -42,18 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validarSoloLetras($apellido)) {
         $errores[] = "El apellido solo puede contener letras.";
     }
-    // ------------------------------------
 
-
-
-    // Validaciones básicas
     if (empty($rut)) { $errores[] = "El RUT es obligatorio."; }
     if (empty($nombre)) { $errores[] = "El nombre es obligatorio."; }
     if (empty($apellido)) { $errores[] = "El apellido es obligatorio."; }
     if (empty($contrasena)) { $errores[] = "La contraseña es obligatoria."; }
     if (empty($rol_id)) { $errores[] = "Debe asignar un rol."; }
 
-    // Validar si el RUT ya existe
     if (empty($errores)) {
         $stmt_check = $pdo->prepare("SELECT Id FROM Usuario WHERE Rut = ?");
         $stmt_check->execute([$rut]);
@@ -64,14 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errores)) {
         try {
-
             $pass_hashed = password_hash($contrasena, PASSWORD_DEFAULT);
 
             $sql = "INSERT INTO Usuario (Id_Rol, Rut, Nombre, Apellido, Contraseña, Telefono, Email, Estado) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             
-            // Usamos $pass_hashed en lugar de $contrasena
             $stmt->execute([$rol_id, $rut, $nombre, $apellido, $pass_hashed, $telefono, $email, $estado]);
 
             $_SESSION['success_message'] = "Usuario creado exitosamente.";
@@ -125,50 +112,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <form action="create.php" method="POST" class="crud-form">
                         
+                        <!-- FILA 1: RUT y ROL -->
                         <div style="display: flex; gap: 20px;">
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="rut">RUT:</label>
-                                    <input type="text" id="rut" name="rut" value="<?php echo htmlspecialchars($rut); ?>" 
-                                        placeholder="12.345.678-9" required maxlength="12" oninput="darFormatoRut(this)">
-                                </div>
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="rol_id">Rol:</label>
-                                    <select id="rol_id" name="rol_id" required>
-                                        <option value="">Seleccione un rol</option>
-                                        <?php foreach ($roles as $rol): ?>
-                                            <option value="<?php echo $rol['Id']; ?>" <?php echo ($rol['Id'] == $rol_id) ? 'selected' : ''; ?>>
-                                                <?php echo htmlspecialchars($rol['Nombre']); ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rut">RUT:</label>
+                                <input type="text" id="rut" name="rut" value="<?php echo htmlspecialchars($rut); ?>" 
+                                    placeholder="12.345.678-9" required maxlength="12" oninput="darFormatoRut(this)">
                             </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="rol_id">Rol:</label>
+                                <select id="rol_id" name="rol_id" required>
+                                    <option value="">Seleccione un rol</option>
+                                    <?php foreach ($roles as $rol): ?>
+                                        <option value="<?php echo $rol['Id']; ?>" <?php echo ($rol['Id'] == $rol_id) ? 'selected' : ''; ?>>
+                                            <?php echo htmlspecialchars($rol['Nombre']); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
 
-                            <div style="display: flex; gap: 20px;">
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="nombre">Nombre:</label>
-                                    <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" 
-                                        required maxlength="50">
-                                </div>
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="apellido">Apellido:</label>
-                                    <input type="text" id="apellido" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" 
-                                        required maxlength="50">
-                                </div>
+                        <!-- FILA 2: NOMBRE y APELLIDO -->
+                        <div style="display: flex; gap: 20px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="nombre">Nombre:</label>
+                                <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" 
+                                    required maxlength="50">
                             </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="apellido">Apellido:</label>
+                                <input type="text" id="apellido" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" 
+                                    required maxlength="50">
+                            </div>
+                        </div>
 
-                            <div style="display: flex; gap: 20px;">
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="email">Email:</label>
-                                    <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>" 
-                                        maxlength="75">
-                                </div>
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="telefono">Teléfono:</label>
-                                    <input type="text" id="telefono" name="telefono" value="<?php echo htmlspecialchars($telefono); ?>" 
-                                        maxlength="30">
-                                </div>
+                        <!-- FILA 3: EMAIL y TELÉFONO -->
+                        <div style="display: flex; gap: 20px;">
+                            <div class="form-group" style="flex: 1;">
+                                <label for="email">Email:</label>
+                                <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>" 
+                                    maxlength="75">
                             </div>
+                            <div class="form-group" style="flex: 1;">
+                                <label for="telefono">Teléfono:</label>
+                                <input type="text" id="telefono" name="telefono" value="<?php echo htmlspecialchars($telefono); ?>" 
+                                    maxlength="30">
+                            </div>
+                        </div>
+
+                        <!-- FILA 4: CONTRASEÑA (AGREGADA) -->
+                        <div class="form-group">
+                            <label for="contrasena">Contraseña:</label>
+                            <div style="position: relative;">
+                                <input type="password" id="contrasena" name="contrasena" 
+                                       placeholder="Ingrese contraseña" required maxlength="50" 
+                                       style="padding-right: 40px;"> <!-- Espacio para el icono -->
+                                
+                                <i class="fa-solid fa-eye" id="togglePassword" 
+                                   style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #9ca3af;"></i>
+                            </div>
+                        </div>
 
                         <div class="form-actions" style="margin-top: 20px;">
                             <button type="submit" class="btn-create" style="cursor:pointer;"><i class="fa-solid fa-save"></i> Guardar Usuario</button>
@@ -178,6 +181,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </section>
         </main>
     </div>
+    
     <script src="../../js/formato_rut.js"></script>
+
+    <!-- SCRIPT PARA VER/OCULTAR CONTRASEÑA -->
+    <script>
+        const togglePassword = document.querySelector('#togglePassword');
+        const password = document.querySelector('#contrasena');
+
+        togglePassword.addEventListener('click', function (e) {
+            // Alternar el tipo de input
+            const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+            password.setAttribute('type', type);
+            
+            // Alternar el icono
+            this.classList.toggle('fa-eye-slash');
+        });
+    </script>
 </body>
 </html>
