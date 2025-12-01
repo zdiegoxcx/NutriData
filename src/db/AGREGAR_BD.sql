@@ -3,8 +3,9 @@
 USE nutridata;
 ALTER TABLE Alerta ADD COLUMN ObservacionesSeguimiento TEXT AFTER Descripcion;
 
--- AGREGAR SEXO PA
 
+
+-- AGREGAR SEXO PA
 USE nutridata;
 
 -- Agregamos la columna Sexo (M = Masculino, F = Femenino)
@@ -16,8 +17,8 @@ UPDATE Estudiante SET Sexo = IF(RAND() > 0.5, 'M', 'F');
 
 
 
--- CAMBIOS REGISTRO
 
+-- CAMBIOS EN REGISTRO NUTRICIONAL PARA DIAGNÓSTICO
 USE nutridata;
 
 -- 1. Agregar la columna de texto para el diagnóstico
