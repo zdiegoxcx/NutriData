@@ -1,13 +1,10 @@
 <?php
 session_start();
 require_once __DIR__ . '/../src/config/db.php';
-
-// --- INYECCIÓN DE TU CÓDIGO: Incluimos el enviador de alertas ---
-require_once __DIR__ . '/../src/enviar_alerta.php'; 
+require_once __DIR__ . '/../src/enviar_alerta.php'; // Tu sistema de correos
 
 $pdo = getConnection();
 
-// --- GUARDIÁN: SOLO PROFESORES ---
 if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'profesor') {
     header("Location: login.php");
     exit;
@@ -18,10 +15,15 @@ $errores = [];
 $mensaje = '';
 $tipo_mensaje = '';
 
-// 1. Verificar estudiante y obtener datos (INCLUYENDO Id_Curso PARA EL BOTÓN VOLVER)
+// 1. OBTENER DATOS COMPLETOS (Estudiante + Curso + Colegio)
 if ($id_estudiante) {
-    // CAMBIO DE TU COMPAÑERO: Se solicitan las nuevas columnas Nombres, ApellidoPaterno, ApellidoMaterno
-    $stmt = $pdo->prepare("SELECT Nombres, ApellidoPaterno, ApellidoMaterno, Rut, FechaNacimiento, Id_Curso FROM Estudiante WHERE Id = ?");
+    $sql_est = "SELECT e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno, e.Rut, e.FechaNacimiento, e.Id_Curso, 
+                c.Nombre as NombreCurso, est.Nombre as NombreEstablecimiento
+                FROM Estudiante e
+                JOIN Curso c ON e.Id_Curso = c.Id
+                JOIN Establecimiento est ON c.Id_Establecimiento = est.Id
+                WHERE e.Id = ?";
+    $stmt = $pdo->prepare($sql_est);
     $stmt->execute([$id_estudiante]);
     $estudiante = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -31,68 +33,70 @@ if ($id_estudiante) {
     exit;
 }
 
-// --- FUNCIÓN DE DIAGNÓSTICO (Lógica de Negocio) ---
+// 2. LÓGICA DE DIAGNÓSTICO REFINADA (MINSAL CHILE / OMS)
 function calcularDiagnostico($imc, $edad) {
-    if ($edad < 19) {
-        // Criterio Escolar Simplificado
-        if ($imc < 16.5) return 'Bajo Peso';
-        if ($imc >= 16.5 && $imc < 23) return 'Normal';
-        if ($imc >= 23 && $imc < 27) return 'Sobrepeso';
-        if ($imc >= 27) return 'Obesidad';
-    } else {
-        // Criterio Adulto Estándar
+    // Adultos (19 años o más) - Clasificación Completa OMS
+    if ($edad >= 19) {
         if ($imc < 18.5) return 'Bajo Peso';
         if ($imc >= 18.5 && $imc < 25) return 'Normal';
-        if ($imc >= 25 && $imc < 30) return 'Sobrepeso';
-        if ($imc >= 30) return 'Obesidad';
+        if ($imc >= 25.0 && $imc < 30) return 'Sobrepeso';
+        if ($imc >= 30.0 && $imc < 35) return 'Obesidad Grado I';
+        if ($imc >= 35.0 && $imc < 40) return 'Obesidad Grado II';
+        if ($imc >= 40.0) return 'Obesidad Grado III';
+    } 
+    // Niños y Adolescentes (Aproximación Estándar Chile)
+    // Nota: En clínica se usan Desviaciones Estándar (DE). Aquí usamos rangos aproximados.
+    else {
+        // Básica (aprox 6-13 años)
+        if ($edad <= 13) {
+            if ($imc < 14.5) return 'Bajo Peso';
+            if ($imc >= 14.5 && $imc < 20) return 'Normal'; 
+            if ($imc >= 20 && $imc < 23) return 'Sobrepeso';
+            if ($imc >= 23 && $imc < 26) return 'Obesidad'; // Equivalente moderado
+            if ($imc >= 26) return 'Obesidad Severa';       // Equivalente a Grado II/III
+        }
+        // Media (14-18 años)
+        else {
+            if ($imc < 17.5) return 'Bajo Peso';
+            if ($imc >= 17.5 && $imc < 24) return 'Normal';
+            if ($imc >= 24 && $imc < 28) return 'Sobrepeso';
+            if ($imc >= 28 && $imc < 32) return 'Obesidad'; 
+            if ($imc >= 32) return 'Obesidad Severa';
+        }
     }
-    return 'Normal';
+    return 'Normal'; 
 }
 
-// --- PROCESAR FORMULARIO ---
+// 3. PROCESAR FORMULARIO
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Recibir datos
     $peso_bruto = floatval($_POST['peso']);
     $altura = floatval($_POST['altura']);
     $motivo_descuento = trim($_POST['motivo_descuento']);
     $peso_descuento = floatval($_POST['peso_descuento']);
     $observaciones = trim($_POST['observaciones']);
 
-    // VALIDACIONES DE TU COMPAÑERO (Respetadas)
-    if ($altura < 0.50 || $altura > 2.10) {
-        $errores[] = "La altura debe estar entre 0.50m y 2.10m.";
-    }
-
-    if ($peso_bruto <= 0 || $peso_bruto > 200) {
-        $errores[] = "El peso debe ser mayor a 0 y máximo 200kg.";
-    }
-    
-    if (!is_numeric($_POST['peso_descuento']) || $_POST['peso_descuento'] < 0) {
-        $errores[] = "El valor de descuento debe ser un número positivo.";
-    }
+    // Validaciones
+    if ($altura < 0.50 || $altura > 2.10) $errores[] = "La altura debe estar entre 0.50m y 2.10m.";
+    if ($peso_bruto <= 0 || $peso_bruto > 200) $errores[] = "El peso debe ser mayor a 0 y máximo 200kg.";
+    if (!is_numeric($_POST['peso_descuento']) || $_POST['peso_descuento'] < 0) $errores[] = "El descuento debe ser positivo.";
 
     $peso_real = $peso_bruto - $peso_descuento;
-    if ($peso_real <= 0) {
-        $errores[] = "El peso final no puede ser cero o negativo. Revise el descuento.";
-    }
+    if ($peso_real <= 0) $errores[] = "El peso final no puede ser cero o negativo.";
 
-    // 3. GUARDAR SI NO HAY ERRORES
     if (empty($errores)) {
         try {
-            // Cálculos
             $imc = round($peso_real / ($altura * $altura), 2);
             
-            // Calcular Edad
+            // Calcular edad
             $fecha_nac = new DateTime($estudiante['FechaNacimiento']);
             $hoy = new DateTime();
             $edad = $hoy->diff($fecha_nac)->y;
 
-            // Obtener Diagnóstico
             $diagnostico = calcularDiagnostico($imc, $edad);
 
             $pdo->beginTransaction();
 
-            // Insertar con Diagnóstico
+            // Insertar Medición
             $sql = "INSERT INTO RegistroNutricional 
                     (Id_Profesor, Id_Estudiante, Altura, Peso, MotivoDescuento, PesoDescuento, Observaciones, IMC, Diagnostico, FechaMedicion) 
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())";
@@ -106,22 +110,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id_registro = $pdo->lastInsertId();
             $mensaje_extra = "";
 
-            // --- TU CÓDIGO: Generar Alerta Y ENVIAR CORREO ---
-            if ($diagnostico == 'Bajo Peso' || $diagnostico == 'Obesidad') {
+            // --- GESTIÓN DE ALERTAS (Ahora incluye todos los grados de obesidad) ---
+            // Detectamos cualquier palabra "Obesidad" o "Bajo Peso" en el diagnóstico
+            if (strpos($diagnostico, 'Bajo Peso') !== false || strpos($diagnostico, 'Obesidad') !== false) {
                 
-                // 1. Guardar en BD
+                // 1. Guardar Alerta
                 $descripcion = "Estudiante diagnosticado con $diagnostico (IMC: $imc, Edad: $edad). Requiere seguimiento.";
                 $sql_alerta = "INSERT INTO Alerta (Id_RegistroNutricional, Nombre, Descripcion, Estado) VALUES (?, ?, ?, 1)";
                 $pdo->prepare($sql_alerta)->execute([$id_registro, "Riesgo de Malnutrición", $descripcion]);
+                
+                $id_alerta_generada = $pdo->lastInsertId(); 
 
-                // 2. Enviar Correo al DAEM (Usando la función que creamos)
-                // Nota: Usamos las nuevas variables de nombre del compañero que vienen en $estudiante
-                $resultado_mail = notificarRiesgoDAEM($pdo, $estudiante, $diagnostico, $imc, $peso_real, $altura);
+                // 2. Enviar Correo
+                $resultado_mail = notificarRiesgoDAEM($pdo, $estudiante, $diagnostico, $imc, $peso_real, $altura, $id_alerta_generada);
 
                 if ($resultado_mail === true) {
-                    $mensaje_extra = " <br><i class='fa-solid fa-envelope-circle-check' style='color:#198754'></i> <strong>Notificación enviada al Director DAEM.</strong>";
+                    $mensaje_extra = " <br><i class='fa-solid fa-envelope-circle-check' style='color:#198754'></i> Notificación enviada al DAEM.";
                 } else {
-                    $mensaje_extra = " <br><span style='color:#dc3545'><i class='fa-solid fa-circle-exclamation'></i> Alerta guardada, pero falló el envío de correo: $resultado_mail</span>";
+                    $mensaje_extra = " <br><span style='color:#fd7e14'><i class='fa-solid fa-circle-exclamation'></i> Alerta guardada, pero falló el correo ($resultado_mail)</span>";
                 }
             }
 
@@ -248,17 +254,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (altura > 0 && peso > 0) {
                 divResultado.style.display = 'block';
-                
-                // VALIDACIÓN VISUAL EN JS TAMBIÉN ACTUALIZADA
                 if (altura > 2.10) {
-                    divResultado.innerHTML = "<span style='color:#dc3545;'><i class='fa-solid fa-circle-xmark'></i> Altura fuera de rango. ¿Usó centímetros?</span>";
+                    divResultado.innerHTML = "<span style='color:#dc3545;'><i class='fa-solid fa-circle-xmark'></i> Altura fuera de rango (Máx 2.10m).</span>";
                     return;
                 }
                 const pesoReal = peso - descuento;
                 const imc = pesoReal / (altura * altura);
                 
                 let color = "#198754";
-                if(imc < 16.5 || imc > 25) color = "#fd7e14"; 
+                if(imc < 18.5 || imc > 25) color = "#fd7e14"; // Alerta visual si sale de normal
+                if(imc > 30) color = "#dc3545"; // Rojo si es obesidad
 
                 divResultado.innerHTML = `Peso Real: <strong>${pesoReal.toFixed(2)} kg</strong> | IMC Estimado: <strong style="color:${color}">${imc.toFixed(2)}</strong>`;
             } else {

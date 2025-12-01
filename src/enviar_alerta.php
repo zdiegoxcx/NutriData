@@ -1,37 +1,32 @@
 <?php
 // src/enviar_alerta.php
-
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Cargar librerías manualmente
 require_once __DIR__ . '/libs/PHPMailer/src/Exception.php';
 require_once __DIR__ . '/libs/PHPMailer/src/PHPMailer.php';
 require_once __DIR__ . '/libs/PHPMailer/src/SMTP.php';
-require_once __DIR__ . '/config/correo.php'; // Tus credenciales
+require_once __DIR__ . '/config/correo.php'; 
 
-function notificarRiesgoDAEM($pdo, $datos_estudiante, $diagnostico, $imc, $peso, $altura) {
+// AHORA RECIBE EL ID DE LA ALERTA PARA EL LINK
+function notificarRiesgoDAEM($pdo, $datos, $diagnostico, $imc, $peso, $altura, $id_alerta) {
     
-    // 1. Buscar el correo del Administrador DAEM en la BD
-    // Buscamos al usuario con rol 'administradorDAEM'
-    $sql = "SELECT Email FROM Usuario u 
-            JOIN Rol r ON u.Id_Rol = r.Id 
-            WHERE r.Nombre = 'administradorDAEM' AND u.Estado = 1 
-            LIMIT 1";
-    $stmt = $pdo->prepare($sql);
+    // 1. Buscar correo DAEM
+    $stmt = $pdo->prepare("SELECT Email FROM Usuario u JOIN Rol r ON u.Id_Rol = r.Id WHERE r.Nombre = 'administradorDAEM' AND u.Estado = 1 LIMIT 1");
     $stmt->execute();
     $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$admin || empty($admin['Email'])) {
-        return "No se encontró email del Director DAEM.";
-    }
-    $email_destino = $admin['Email'];
+    if (!$admin || empty($admin['Email'])) return "No se encontró email DAEM.";
+    
+    // 2. Generar Link Dinámico (Detecta localhost)
+    $host = $_SERVER['HTTP_HOST']; 
+    $protocolo = isset($_SERVER['HTTPS']) ? 'https' : 'http';
+    // Ajusta 'NutriData' si tu carpeta se llama distinto
+    $link = "$protocolo://$host/NutriData/public/AdminDAEM/gestionar_alerta.php?id=$id_alerta";
 
-    // 2. Configurar el Correo
     $mail = new PHPMailer(true);
 
     try {
-        // Servidor
         $mail->isSMTP();
         $mail->Host       = MAIL_HOST;
         $mail->SMTPAuth   = true;
@@ -40,44 +35,48 @@ function notificarRiesgoDAEM($pdo, $datos_estudiante, $diagnostico, $imc, $peso,
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
         $mail->Port       = MAIL_PORT;
 
-        // Cabeceras
         $mail->setFrom(MAIL_USER, MAIL_FROM_NAME);
-        $mail->addAddress($email_destino); // Director DAEM
+        $mail->addAddress($admin['Email']); 
 
-        // Contenido
         $mail->isHTML(true);
         $mail->CharSet = 'UTF-8';
-        $mail->Subject = "⚠️ ALERTA NUTRICIONAL: " . $datos_estudiante['Nombres'];
+        $mail->Subject = "🚨 Alerta: {$datos['Nombres']} ({$datos['NombreEstablecimiento']})";
 
         $cuerpo = "
-        <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; max-width: 600px;'>
-            <h2 style='color: #dc3545;'>Detección de Riesgo Nutricional</h2>
-            <p>Estimado Administrador DAEM,</p>
-            <p>El sistema NutriData ha detectado un caso que requiere atención inmediata.</p>
-            
-            <hr>
-            <h3>Detalles del Estudiante</h3>
-            <ul>
-                <li><strong>Nombre:</strong> {$datos_estudiante['Nombres']} {$datos_estudiante['ApellidoPaterno']}</li>
-                <li><strong>RUT:</strong> {$datos_estudiante['Rut']}</li>
-                <li><strong>Diagnóstico:</strong> <span style='color:red; font-weight:bold;'>$diagnostico</span></li>
-                <li><strong>IMC:</strong> $imc</li>
-                <li><strong>Medición:</strong> Peso $peso kg / Altura $altura m</li>
-            </ul>
-            <hr>
-            
-            <p style='color: #666; font-size: 12px;'>Este es un mensaje automático. Por favor ingrese al Dashboard para gestionar el caso.</p>
+        <div style='font-family:Segoe UI, sans-serif; color:#333; max-width:600px; border:1px solid #e0e0e0; border-radius:8px; overflow:hidden;'>
+            <div style='background-color:#dc3545; padding:15px; text-align:center;'>
+                <h2 style='color:white; margin:0;'>Riesgo Nutricional Detectado</h2>
+            </div>
+            <div style='padding:20px;'>
+                <p>El sistema ha detectado una medición crítica que requiere su atención.</p>
+                
+                <table style='width:100%; border-collapse:collapse; margin-top:15px; border:1px solid #eee;'>
+                    <tr style='background:#f9f9f9;'><td style='padding:8px; font-weight:bold;'>Estudiante:</td><td style='padding:8px;'>{$datos['Nombres']} {$datos['ApellidoPaterno']}</td></tr>
+                    <tr><td style='padding:8px; font-weight:bold;'>RUT:</td><td style='padding:8px;'>{$datos['Rut']}</td></tr>
+                    <tr style='background:#f9f9f9;'><td style='padding:8px; font-weight:bold;'>Curso:</td><td style='padding:8px;'>{$datos['NombreCurso']}</td></tr>
+                    <tr><td style='padding:8px; font-weight:bold;'>Colegio:</td><td style='padding:8px;'>{$datos['NombreEstablecimiento']}</td></tr>
+                    <tr style='background:#fff0f0;'><td style='padding:8px; font-weight:bold; color:#dc3545;'>Diagnóstico:</td><td style='padding:8px; color:#dc3545; font-weight:bold;'>$diagnostico</td></tr>
+                    <tr><td style='padding:8px; font-weight:bold;'>IMC:</td><td style='padding:8px;'>$imc</td></tr>
+                </table>
+
+                <div style='text-align:center; margin-top:25px; margin-bottom:15px;'>
+                    <a href='$link' style='background-color:#0d6efd; color:white; padding:12px 24px; text-decoration:none; border-radius:5px; font-weight:bold;'>Gestionar Caso Ahora</a>
+                </div>
+                <hr>
+                <p style='text-align:center; font-size:11px; color:#999;'>
+                    Mensaje automático de NutriData.<br>
+                    Si el botón no funciona: $link
+                </p>
+            </div>
         </div>
         ";
 
         $mail->Body = $cuerpo;
-        $mail->AltBody = "Alerta de Riesgo: Estudiante {$datos_estudiante['Rut']} presenta $diagnostico (IMC: $imc).";
-
         $mail->send();
         return true;
 
     } catch (Exception $e) {
-        return "Error al enviar correo: {$mail->ErrorInfo}";
+        return "Error Mail: {$mail->ErrorInfo}";
     }
 }
 ?>

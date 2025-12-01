@@ -102,17 +102,33 @@ $stmt_c = $pdo->prepare($sql_conteo); $stmt_c->execute($params_a);
 $total_regs = $stmt_c->fetchColumn();
 $total_pags = ceil($total_regs / $registros_por_pagina);
 
-// Consulta Final - CAMBIO AQUÍ: CONCAT_WS para el nombre completo
+// Consulta Final - CONCAT_WS para nombres y FILTRO DE ÚLTIMA ALERTA
 $sql_alertas = "
     SELECT 
         a.Id as IdAlerta, a.Estado, 
         CONCAT_WS(' ', e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno) as Estudiante,
         est.Nombre as Establecimiento, 
         r.IMC, r.FechaMedicion, r.Diagnostico 
-    " . $sql_base_alertas . $where_a . " 
-    ORDER BY a.Estado DESC, r.FechaMedicion DESC 
-    LIMIT $registros_por_pagina OFFSET $offset
+    " . $sql_base_alertas . "
+    
+    -- AQUÍ INICIA EL FILTRO DE DUPLICADOS
+    WHERE a.Id IN (
+        SELECT MAX(a2.Id)
+        FROM Alerta a2
+        JOIN RegistroNutricional r2 ON a2.Id_RegistroNutricional = r2.Id
+        GROUP BY r2.Id_Estudiante
+    )
 ";
+
+// Si hay filtros adicionales seleccionados por el usuario (Colegio, Sexo, Estado)
+if (!empty($where_a)) {
+    // Quitamos el primer "WHERE" de $where_a porque ya pusimos uno arriba
+    $filtro_extra = str_replace("WHERE", "AND", $where_a); 
+    $sql_alertas .= " " . $filtro_extra;
+}
+
+$sql_alertas .= " ORDER BY a.Estado DESC, r.FechaMedicion DESC LIMIT $registros_por_pagina OFFSET $offset";
+
 $stmt_alertas = $pdo->prepare($sql_alertas);
 $stmt_alertas->execute($params_a);
 ?>
