@@ -1,0 +1,87 @@
+/* =========================================
+   8. NUEVO DISEÑO DE TABLAS (INTERACTIVO)
+   ========================================= */
+
+/* Fila interactiva (Clickable) */
+.clickable-row {
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.clickable-row:hover {
+    background-color: #e0e7ff !important; /* Iluminación al pasar el cursor (azul suave) */
+}
+
+/* Columna del menú (Tres puntos) */
+.menu-column {
+    width: 50px;
+    text-align: center;
+    position: relative;
+}
+
+/* Botón de tres puntos */
+.btn-dots {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.btn-dots:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+}
+
+/* Contenedor del Dropdown */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Menú desplegable (Oculto por defecto) */
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #fff;
+    min-width: 160px;
+    box-shadow: 0px 10px 15px -3px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    z-index: 50;
+    overflow: hidden;
+    text-align: left;
+}
+
+/* Elementos del menú */
+.dropdown-menu a {
+    color: #374151;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    font-size: 0.9rem;
+    transition: background 0.1s;
+}
+
+.dropdown-menu a:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+}
+
+.dropdown-menu a.danger-action {
+    color: #dc2626;
+}
+
+.dropdown-menu a.danger-action:hover {
+    background-color: #fef2f2;
+}
+
+/* Clase para mostrar el menú */
+.show-menu {
+    display: block;
+    animation: fadeIn 0.1s ease-out;
+}

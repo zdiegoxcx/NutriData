@@ -1,113 +1,122 @@
-/* === ESTILOS PARA EL MODAL DE SEGURIDAD === */
-        .modal-overlay {
-            display: none; /* Oculto por defecto */
-            position: fixed;
-            z-index: 9999;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7); /* Fondo oscuro semitransparente */
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.2s;
-        }
+/* =========================================
+    VENTANA MODAL DE SEGURIDAD
+   ========================================= */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s;
+}
 
-        .modal-danger {
-            background: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 500px;
-            border-top: 6px solid #dc3545; /* Línea roja superior */
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            text-align: center;
-            position: relative;
-        }
+.modal-danger {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    border-top: 6px solid #dc3545;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    text-align: center;
+    position: relative;
+}
 
-        .modal-danger h2 {
-            color: #dc3545;
-            margin-bottom: 15px;
-            font-size: 1.5rem;
-        }
+.modal-danger h2 {
+    color: #dc3545;
+    margin-bottom: 15px;
+    font-size: 1.5rem;
+}
 
-        .modal-danger p {
-            color: #495057;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
+.warning-box {
+    background-color: #fff5f5;
+    border: 1px solid #fecaca;
+    color: #c53030;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    text-align: left;
+}
 
-        .warning-box {
-            background-color: #fff5f5;
-            border: 1px solid #fecaca;
-            color: #c53030;
-            padding: 10px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            margin-bottom: 20px;
-            text-align: left;
-        }
+/* GRUPOS DE INPUTS DEL MODAL */
+.input-group-modal {
+    margin-bottom: 20px;
+    text-align: left;
+}
 
-        .confirmation-input-container {
-            margin-bottom: 20px;
-            text-align: left;
-        }
+.input-group-modal label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
 
-        .confirmation-input-container label {
-            font-weight: bold;
-            display: block;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
+.input-group-modal input, 
+.input-group-modal textarea {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ced4da;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-family: inherit;
+    box-sizing: border-box; /* Asegura que el padding no rompa el ancho */
+}
 
-        .confirmation-input-container input {
-            width: 100%;
-            padding: 10px;
-            border: 2px solid #ced4da;
-            border-radius: 6px;
-            font-size: 1rem;
-        }
+/* --- REGLA ESPECÍFICA PARA QUE NO SE ESTIRE HACIA EL LADO --- */
+.input-group-modal textarea {
+    resize: vertical; /* Solo permite redimensionar la altura */
+    min-height: 80px; /* Altura mínima */
+    max-height: 200px; /* Altura máxima opcional */
+}
 
-        .confirmation-input-container input:focus {
-            border-color: #dc3545; /* Foco rojo */
-            outline: none;
-        }
+.input-group-modal input:focus, 
+.input-group-modal textarea:focus {
+    border-color: #dc3545;
+    outline: none;
+}
 
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-        }
+/* BOTONES DEL MODAL */
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
 
-        .btn-cancel-modal {
-            background: #e9ecef;
-            color: #333;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-        }
+.btn-cancel-modal {
+    background: #e9ecef;
+    color: #333;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
 
-        .btn-delete-confirm {
-            background: #dc3545;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            opacity: 0.5;
-            pointer-events: none; /* Deshabilitado por defecto */
-            transition: opacity 0.2s;
-        }
+.btn-delete-confirm {
+    background: #dc3545;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    opacity: 0.5;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
 
-        .btn-delete-confirm.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
+.btn-delete-confirm.active {
+    opacity: 1;
+    pointer-events: auto;
+}
 
-        @keyframes fadeIn {
-            from {opacity: 0;}
-            to {opacity: 1;}
-        }
+@keyframes fadeIn {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
