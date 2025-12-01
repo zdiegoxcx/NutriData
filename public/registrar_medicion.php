@@ -13,18 +13,37 @@ $id_estudiante = $_GET['id_estudiante'] ?? null;
 $mensaje = '';
 $tipo_mensaje = '';
 
-// Verificar que el estudiante existe
+// Verificar que el estudiante existe y obtener su Fecha de Nacimiento
 if ($id_estudiante) {
-    $stmt = $pdo->prepare("SELECT Nombre, Apellido, Rut FROM Estudiante WHERE Id = ?");
+    $stmt = $pdo->prepare("SELECT Nombre, Apellido, Rut, FechaNacimiento FROM Estudiante WHERE Id = ?");
     $stmt->execute([$id_estudiante]);
     $estudiante = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$estudiante) {
-        die("Estudiante no encontrado.");
-    }
+    if (!$estudiante) die("Estudiante no encontrado.");
 } else {
     header("Location: dashboard_profesor.php");
     exit;
+}
+
+// --- FUNCIÓN DE DIAGNÓSTICO (Lógica de Negocio) ---
+function calcularDiagnostico($imc, $edad) {
+    // AQUÍ PUEDES MEJORAR LA LÓGICA EN EL FUTURO (TABLAS OMS)
+    // Por ahora, usamos un criterio simplificado pero adaptado:
+    
+    if ($edad < 19) {
+        // Criterio Escolar Simplificado (Ejemplo referencial)
+        if ($imc < 16.5) return 'Bajo Peso';
+        if ($imc >= 16.5 && $imc < 23) return 'Normal';
+        if ($imc >= 23 && $imc < 27) return 'Sobrepeso';
+        if ($imc >= 27) return 'Obesidad';
+    } else {
+        // Criterio Adulto Estándar
+        if ($imc < 18.5) return 'Bajo Peso';
+        if ($imc >= 18.5 && $imc < 25) return 'Normal';
+        if ($imc >= 25 && $imc < 30) return 'Sobrepeso';
+        if ($imc >= 30) return 'Obesidad';
+    }
+    return 'Normal';
 }
 
 // --- PROCESAR FORMULARIO ---
@@ -36,71 +55,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $observaciones = trim($_POST['observaciones']);
 
     if ($peso_bruto > 0 && $altura > 0) {
-        
-        // 1. Calcular Peso Real y IMC
-        // Si hay descuento (ropa, yeso), se resta del peso bruto
         $peso_real = $peso_bruto - $peso_descuento;
         
-        // Evitar división por cero o pesos negativos
         if ($peso_real <= 0) {
             $mensaje = "El peso con descuento no puede ser cero o negativo.";
             $tipo_mensaje = "error";
         } else {
-            // Fórmula IMC: Peso (kg) / (Altura (m) * Altura (m))
-            $imc = $peso_real / ($altura * $altura);
-            $imc = round($imc, 2); // Redondear a 2 decimales
+            // 1. Cálculos
+            $imc = round($peso_real / ($altura * $altura), 2);
+            
+            // Calcular edad exacta
+            $fecha_nac = new DateTime($estudiante['FechaNacimiento']);
+            $hoy = new DateTime();
+            $edad = $hoy->diff($fecha_nac)->y;
+
+            // Obtener diagnóstico textual
+            $diagnostico = calcularDiagnostico($imc, $edad);
 
             try {
                 $pdo->beginTransaction();
 
-                // 2. Insertar en RegistroNutricional
-                // Nota: Guardamos el Peso bruto en 'Peso' y el descuento en 'PesoDescuento' según tu SQL
+                // 2. Insertar en RegistroNutricional (AHORA CON DIAGNÓSTICO)
                 $sql = "INSERT INTO RegistroNutricional 
-                        (Id_Profesor, Id_Estudiante, Altura, Peso, MotivoDescuento, PesoDescuento, Observaciones, IMC, FechaMedicion) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURDATE())";
+                        (Id_Profesor, Id_Estudiante, Altura, Peso, MotivoDescuento, PesoDescuento, Observaciones, IMC, Diagnostico, FechaMedicion) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())";
                 
                 $stmt_insert = $pdo->prepare($sql);
                 $stmt_insert->execute([
-                    $_SESSION['user_id'],
-                    $id_estudiante,
-                    $altura,
-                    $peso_bruto,
-                    $motivo_descuento,
-                    $peso_descuento,
-                    $observaciones,
-                    $imc
+                    $_SESSION['user_id'], $id_estudiante, $altura, $peso_bruto, 
+                    $motivo_descuento, $peso_descuento, $observaciones, $imc, $diagnostico
                 ]);
                 
                 $id_registro = $pdo->lastInsertId();
 
-                // 3. GENERACIÓN AUTOMÁTICA DE ALERTA
-                // Si IMC < 18.5 (Bajo Peso) o IMC >= 25 (Sobrepeso/Obesidad)
-                if ($imc < 18.5 || $imc >= 25) {
-                    $estado_nutricional = ($imc < 18.5) ? "Bajo Peso" : "Exceso de Peso";
-                    $descripcion_alerta = "Estudiante detectado con $estado_nutricional (IMC: $imc). Requiere seguimiento.";
-                    
-                    $sql_alerta = "INSERT INTO Alerta (Id_RegistroNutricional, Nombre, Descripcion, Estado) 
-                                   VALUES (?, ?, ?, 1)"; // Estado 1 = Pendiente/Activa
-                    $stmt_alerta = $pdo->prepare($sql_alerta);
-                    $stmt_alerta->execute([$id_registro, "Riesgo de Malnutrición", $descripcion_alerta]);
+                // 3. GENERAR ALERTA SI ES NECESARIO
+                // Ahora nos basamos en el diagnóstico, no en el número crudo
+                if ($diagnostico == 'Bajo Peso' || $diagnostico == 'Obesidad') {
+                    $descripcion = "Estudiante diagnosticado con $diagnostico (IMC: $imc, Edad: $edad). Requiere seguimiento.";
+                    $sql_alerta = "INSERT INTO Alerta (Id_RegistroNutricional, Nombre, Descripcion, Estado) VALUES (?, ?, ?, 1)";
+                    $pdo->prepare($sql_alerta)->execute([$id_registro, "Riesgo de Malnutrición", $descripcion]);
                 }
 
                 $pdo->commit();
-                $mensaje = "Medición registrada exitosamente. IMC calculado: " . $imc;
+                $mensaje = "Medición registrada. Diagnóstico: <strong>$diagnostico</strong> (IMC: $imc)";
                 $tipo_mensaje = "success";
-                
-                // Redirigir después de un momento o mostrar botón de volver
-                // header("Refresh: 2; url=dashboard_profesor.php?vista=mediciones&id_estudiante=$id_estudiante");
 
             } catch (PDOException $e) {
                 $pdo->rollBack();
-                $mensaje = "Error al guardar: " . $e->getMessage();
+                $mensaje = "Error: " . $e->getMessage();
                 $tipo_mensaje = "error";
             }
         }
     } else {
-        $mensaje = "El peso y la altura deben ser mayores a cero.";
-        $tipo_mensaje = "error";
+        $mensaje = "Datos inválidos."; $tipo_mensaje = "error";
     }
 }
 ?>
@@ -109,122 +116,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Registrar Medición</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .mensaje.success { background-color: #d1e7dd; color: #0f5132; border-color: #badbcc; padding: 15px; margin-bottom: 20px; border-radius: 4px;}
-        .imc-preview { font-size: 1.2rem; font-weight: bold; margin-top: 10px; color: #0d6efd; }
-    </style>
+    <style>.imc-preview { font-weight: bold; margin-top: 10px; color: #0d6efd; }</style>
 </head>
 <body>
     <div class="dashboard-wrapper">
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>NutriMonitor</h2>
-            </div>
+            <div class="sidebar-header"><h2>NutriMonitor</h2></div>
             <nav class="sidebar-nav">
-                <a href="dashboard_profesor.php?vista=estudiantes&id_curso=<?php echo $_GET['id_curso'] ?? ''; // Intentar mantener contexto ?>" class="nav-item active">
-                    <i class="fa-solid fa-arrow-left"></i> Volver al listado
-                </a>
+                <a href="dashboard_profesor.php?vista=estudiantes" class="nav-item active"><i class="fa-solid fa-arrow-left"></i> Volver</a>
             </nav>
         </aside>
-
         <main class="main-content">
-            <header class="header">
-                <div class="header-user"><?php echo htmlspecialchars($_SESSION['user_nombre']); ?></div>
-            </header>
-
+            <header class="header"><div class="header-user"><?php echo htmlspecialchars($_SESSION['user_nombre']); ?></div></header>
             <section class="content-body">
                 <div class="content-container">
                     <h1><i class="fa-solid fa-weight-scale"></i> Nueva Medición</h1>
                     <h3>Estudiante: <?php echo htmlspecialchars($estudiante['Nombre'] . " " . $estudiante['Apellido']); ?></h3>
-                    <p>RUT: <?php echo htmlspecialchars($estudiante['Rut']); ?></p>
-                    <hr>
-
+                    
                     <?php if ($mensaje): ?>
-                        <div class="mensaje <?php echo $tipo_mensaje; ?>">
-                            <?php echo $mensaje; ?>
-                            <?php if ($tipo_mensaje == 'success'): ?>
-                                <br><a href="dashboard_profesor.php?vista=mediciones&id_estudiante=<?php echo $id_estudiante; ?>">Ver historial</a>
-                            <?php endif; ?>
-                        </div>
+                        <div class="mensaje <?php echo $tipo_mensaje; ?>"><?php echo $mensaje; ?></div>
                     <?php endif; ?>
 
-                    <?php if ($tipo_mensaje !== 'success'): // Ocultar formulario si ya se guardó ?>
-                    <form method="POST" class="crud-form" id="formMedicion">
-                        
-                        <div style="display: flex; gap: 20px;">
-                            <div class="form-group" style="flex: 1;">
-                                <label for="altura">Altura (en Metros, ej: 1.65):</label>
-                                <input type="number" step="0.01" id="altura" name="altura" required placeholder="1.65" oninput="calcularIMC()">
+                    <?php if ($tipo_mensaje !== 'success'): ?>
+                    <form method="POST" class="crud-form">
+                        <div style="display:flex; gap:20px;">
+                            <div class="form-group" style="flex:1;">
+                                <label>Altura (m):</label>
+                                <input type="number" step="0.01" id="altura" name="altura" required placeholder="1.65">
                             </div>
-                            <div class="form-group" style="flex: 1;">
-                                <label for="peso">Peso (en KG, ej: 60.5):</label>
-                                <input type="number" step="0.01" id="peso" name="peso" required placeholder="60.5" oninput="calcularIMC()">
+                            <div class="form-group" style="flex:1;">
+                                <label>Peso (kg):</label>
+                                <input type="number" step="0.01" id="peso" name="peso" required placeholder="60.5">
                             </div>
                         </div>
-
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                            <h4><i class="fa-solid fa-shirt"></i> Descuento de Peso (Opcional)</h4>
-                            <div style="display: flex; gap: 20px;">
-                                <div class="form-group" style="flex: 2;">
-                                    <label for="motivo_descuento">Motivo (Ej: Ropa, Yeso):</label>
-                                    <input type="text" id="motivo_descuento" name="motivo_descuento" placeholder="Ropa de invierno">
-                                </div>
-                                <div class="form-group" style="flex: 1;">
-                                    <label for="peso_descuento">Kilos a descontar:</label>
-                                    <input type="number" step="0.01" id="peso_descuento" name="peso_descuento" value="0" oninput="calcularIMC()">
-                                </div>
+                        
+                        <div style="background:#f8f9fa; padding:15px; border-radius:6px; margin-bottom:20px;">
+                            <h4><i class="fa-solid fa-shirt"></i> Descuento (Opcional)</h4>
+                            <div style="display:flex; gap:20px;">
+                                <div class="form-group" style="flex:2;"><label>Motivo:</label><input type="text" name="motivo_descuento"></div>
+                                <div class="form-group" style="flex:1;"><label>Kilos a descontar:</label><input type="number" step="0.01" name="peso_descuento" value="0"></div>
                             </div>
                         </div>
 
                         <div class="form-group">
-                            <label for="observaciones">Observaciones:</label>
-                            <textarea id="observaciones" name="observaciones" rows="3" style="width:100%; padding:10px;"></textarea>
+                            <label>Observaciones:</label>
+                            <textarea name="observaciones" rows="3"></textarea>
                         </div>
 
-                        <div id="resultadoIMC" class="imc-preview"></div>
-
-                        <div class="form-actions" style="margin-top: 20px;">
-                            <button type="submit" class="btn-create" style="width: 100%; padding: 12px; font-size: 1.1rem;">
-                                <i class="fa-solid fa-save"></i> Guardar Medición
-                            </button>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-create" style="width:100%;">Guardar Medición</button>
                         </div>
                     </form>
                     <?php endif; ?>
-
                 </div>
             </section>
         </main>
     </div>
-
-    <script>
-        function calcularIMC() {
-            const altura = parseFloat(document.getElementById('altura').value);
-            const peso = parseFloat(document.getElementById('peso').value);
-            const descuento = parseFloat(document.getElementById('peso_descuento').value) || 0;
-            const divResultado = document.getElementById('resultadoIMC');
-
-            if (altura > 0 && peso > 0) {
-                const pesoReal = peso - descuento;
-                if (pesoReal <= 0) {
-                    divResultado.innerHTML = "<span style='color:red'>El peso real no puede ser cero o negativo.</span>";
-                    return;
-                }
-                const imc = pesoReal / (altura * altura);
-                let estado = "";
-                let color = "";
-
-                if (imc < 18.5) { estado = "Bajo Peso"; color = "#ffc107"; }
-                else if (imc < 25) { estado = "Normal"; color = "#198754"; }
-                else if (imc < 30) { estado = "Sobrepeso"; color = "#fd7e14"; }
-                else { estado = "Obesidad"; color = "#dc3545"; }
-
-                divResultado.innerHTML = `IMC Estimado: <strong>${imc.toFixed(2)}</strong> - <span style="color:${color}; font-weight:bold;">${estado}</span>`;
-            } else {
-                divResultado.innerHTML = "";
-            }
-        }
-    </script>
 </body>
 </html>
