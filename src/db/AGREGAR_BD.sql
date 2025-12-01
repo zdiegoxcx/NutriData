@@ -56,3 +56,9 @@ SET Contraseña = '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa'
 -- Agrandamos el espacio para que quepan los puntos y guion (ej: 12.345.678-9)
 ALTER TABLE Usuario MODIFY COLUMN Rut VARCHAR(20);
 ALTER TABLE Estudiante MODIFY COLUMN Rut VARCHAR(20);
+
+
+-- ACTUALIZAR CORREO ADMIN DAEM A EL EXISTENTE JEJE
+UPDATE Usuario 
+SET Email = 'nutridata.daem@gmail.com' 
+WHERE Id_Rol = 3; -- Rol 3 es Admin DAEM

@@ -1,6 +1,10 @@
 <?php
 session_start();
 require_once __DIR__ . '/../src/config/db.php';
+
+// --- INYECCIÓN DE TU CÓDIGO: Incluimos el enviador de alertas ---
+require_once __DIR__ . '/../src/enviar_alerta.php'; 
+
 $pdo = getConnection();
 
 // --- GUARDIÁN: SOLO PROFESORES ---
@@ -16,7 +20,7 @@ $tipo_mensaje = '';
 
 // 1. Verificar estudiante y obtener datos (INCLUYENDO Id_Curso PARA EL BOTÓN VOLVER)
 if ($id_estudiante) {
-    // CAMBIO: Se solicitan las nuevas columnas Nombres, ApellidoPaterno, ApellidoMaterno
+    // CAMBIO DE TU COMPAÑERO: Se solicitan las nuevas columnas Nombres, ApellidoPaterno, ApellidoMaterno
     $stmt = $pdo->prepare("SELECT Nombres, ApellidoPaterno, ApellidoMaterno, Rut, FechaNacimiento, Id_Curso FROM Estudiante WHERE Id = ?");
     $stmt->execute([$id_estudiante]);
     $estudiante = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -54,17 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $peso_descuento = floatval($_POST['peso_descuento']);
     $observaciones = trim($_POST['observaciones']);
 
+    // VALIDACIONES DE TU COMPAÑERO (Respetadas)
     if ($altura < 0.50 || $altura > 2.10) {
         $errores[] = "La altura debe estar entre 0.50m y 2.10m.";
     }
 
-    // Peso: mayor a 0 y máximo 200 (antes era 300)
     if ($peso_bruto <= 0 || $peso_bruto > 200) {
         $errores[] = "El peso debe ser mayor a 0 y máximo 200kg.";
     }
     
-    // Validación Kilos a descontar (Solo números y positivos)
-    // $_POST['peso_descuento'] viene como string del form
     if (!is_numeric($_POST['peso_descuento']) || $_POST['peso_descuento'] < 0) {
         $errores[] = "El valor de descuento debe ser un número positivo.";
     }
@@ -102,16 +104,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
             
             $id_registro = $pdo->lastInsertId();
+            $mensaje_extra = "";
 
-            // Generar Alerta
+            // --- TU CÓDIGO: Generar Alerta Y ENVIAR CORREO ---
             if ($diagnostico == 'Bajo Peso' || $diagnostico == 'Obesidad') {
+                
+                // 1. Guardar en BD
                 $descripcion = "Estudiante diagnosticado con $diagnostico (IMC: $imc, Edad: $edad). Requiere seguimiento.";
                 $sql_alerta = "INSERT INTO Alerta (Id_RegistroNutricional, Nombre, Descripcion, Estado) VALUES (?, ?, ?, 1)";
                 $pdo->prepare($sql_alerta)->execute([$id_registro, "Riesgo de Malnutrición", $descripcion]);
+
+                // 2. Enviar Correo al DAEM (Usando la función que creamos)
+                // Nota: Usamos las nuevas variables de nombre del compañero que vienen en $estudiante
+                $resultado_mail = notificarRiesgoDAEM($pdo, $estudiante, $diagnostico, $imc, $peso_real, $altura);
+
+                if ($resultado_mail === true) {
+                    $mensaje_extra = " <br><i class='fa-solid fa-envelope-circle-check' style='color:#198754'></i> <strong>Notificación enviada al Director DAEM.</strong>";
+                } else {
+                    $mensaje_extra = " <br><span style='color:#dc3545'><i class='fa-solid fa-circle-exclamation'></i> Alerta guardada, pero falló el envío de correo: $resultado_mail</span>";
+                }
             }
 
             $pdo->commit();
-            $mensaje = "Medición registrada. Diagnóstico: <strong>$diagnostico</strong> (IMC: $imc)";
+            $mensaje = "Medición registrada. Diagnóstico: <strong>$diagnostico</strong> (IMC: $imc)" . $mensaje_extra;
             $tipo_mensaje = "success";
 
         } catch (PDOException $e) {
@@ -180,14 +195,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div style="display:flex; gap:20px; flex-wrap:wrap;">
                             <div class="form-group" style="flex:1; min-width:200px;">
                                 <label>Altura (Metros):</label>
-                                <input type="number" step="0.01" min="0.50" max="2.00" id="altura" name="altura" 
+                                <input type="number" step="0.01" min="0.50" max="2.10" id="altura" name="altura" 
                                        required placeholder="Ej: 1.65" oninput="calcularIMC()"
                                        value="<?php echo isset($_POST['altura']) ? htmlspecialchars($_POST['altura']) : ''; ?>">
-                                <span class="hint">Use punto. Mín: 0.50m, Máx: 2.00m</span>
+                                <span class="hint">Use punto. Mín: 0.50m, Máx: 2.10m</span>
                             </div>
                             <div class="form-group" style="flex:1; min-width:200px;">
                                 <label>Peso (Kg):</label>
-                                <input type="number" step="0.01" min="10" max="300" id="peso" name="peso" 
+                                <input type="number" step="0.01" min="1" max="200" id="peso" name="peso" 
                                        required placeholder="Ej: 60.5" oninput="calcularIMC()"
                                        value="<?php echo isset($_POST['peso']) ? htmlspecialchars($_POST['peso']) : ''; ?>">
                             </div>
@@ -233,15 +248,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (altura > 0 && peso > 0) {
                 divResultado.style.display = 'block';
-                // CORRECCIÓN: Validación visual en JS
-                if (altura > 2.00) {
-                    divResultado.innerHTML = "<span style='color:#dc3545;'><i class='fa-solid fa-circle-xmark'></i> Altura fuera de rango (Máx 2.00m). ¿Usó centímetros?</span>";
+                
+                // VALIDACIÓN VISUAL EN JS TAMBIÉN ACTUALIZADA
+                if (altura > 2.10) {
+                    divResultado.innerHTML = "<span style='color:#dc3545;'><i class='fa-solid fa-circle-xmark'></i> Altura fuera de rango. ¿Usó centímetros?</span>";
                     return;
                 }
                 const pesoReal = peso - descuento;
                 const imc = pesoReal / (altura * altura);
                 
-                // Feedback visual simple
                 let color = "#198754";
                 if(imc < 16.5 || imc > 25) color = "#fd7e14"; 
 

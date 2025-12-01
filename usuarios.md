@@ -27,4 +27,4 @@ Cada profesor tiene asignados cursos y colegios específicos en la región del B
 | **Camila Rojas** | `12345678-9` | `12345` | Colegio Puerto Talcahuano |
 | **Sergio Nuñez** | `10000000-0` | `12345` | Colegio Industrial Coronel |
 
-> **Nota:** Todos los RUTs deben ingresarse sin puntos y con guion.
+> **Nota:** Todos los RUTs deben ingresarse sin puntos y con guion .
