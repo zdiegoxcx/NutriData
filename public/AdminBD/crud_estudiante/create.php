@@ -1,6 +1,8 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../../src/config/db.php';
+// AGREGAR ESTA LÍNEA:
+require_once __DIR__ . '/../../../src/config/validaciones.php';
 $pdo = getConnection();
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') {
@@ -43,6 +45,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($nombres)) $errores[] = "Nombres obligatorios.";
     if (empty($apellido_paterno)) $errores[] = "Apellido Paterno obligatorio.";
     if (empty($sexo)) $errores[] = "Debe seleccionar el sexo.";
+
+    // --- VALIDACIONES DE FORMATO ---
+    if (!validarRut($rut)) {
+        $errores[] = "El RUT del estudiante no es válido.";
+    }
+    if (!validarSoloLetras($nombres)) {
+        $errores[] = "Los nombres solo pueden contener letras.";
+    }
+    if (!validarSoloLetras($apellido_paterno) || (!empty($apellido_materno) && !validarSoloLetras($apellido_materno))) {
+        $errores[] = "Los apellidos solo pueden contener letras.";
+    }
+
+    // --- VALIDACIÓN DE FECHA (MÍNIMO 2 AÑOS DE EDAD) ---
+    if (!empty($fecha_nac)) {
+        $fechaIngresada = new DateTime($fecha_nac);
+        $fechaLimite = new DateTime('-2 years'); // Fecha de hoy hace 2 años
+
+        // Si la fecha ingresada es MAYOR a la fecha límite (ej: nació ayer), es error
+        if ($fechaIngresada > $fechaLimite) {
+            $errores[] = "El estudiante debe tener al menos 2 años de edad.";
+        }
+        
+        // Opcional: Validar que no sea una fecha futura (aunque la lógica anterior ya lo cubre)
+        if ($fechaIngresada > new DateTime()) {
+             $errores[] = "La fecha de nacimiento no puede estar en el futuro.";
+        }
+    }
+    // ---------------------------------------------------
 
     // Validar duplicado
     $check = $pdo->prepare("SELECT Id FROM Estudiante WHERE Rut = ?");
@@ -101,7 +131,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex:1;">
                                 <label>RUT:</label>
-                                <input type="text" name="rut" value="<?php echo htmlspecialchars($rut); ?>" placeholder="12345678-9" required>
+                                <input type="text" name="rut" 
+       value="<?php echo htmlspecialchars($est['Rut'] ?? $rut); ?>" 
+       required 
+       placeholder="12.345.678-9"
+       maxlength="12"
+       oninput="darFormatoRut(this)">
                             </div>
                             <div class="form-group" style="flex:1;">
                                 <label>Fecha Nacimiento:</label>
@@ -140,5 +175,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </section>
         </main>
     </div>
+    <script src="../../js/formato_rut.js"></script>
 </body>
 </html>

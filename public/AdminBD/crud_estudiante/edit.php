@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../../src/config/db.php';
+// INCLUIR ARCHIVO DE VALIDACIONES
+require_once __DIR__ . '/../../../src/config/validaciones.php';
+
 $pdo = getConnection();
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') {
@@ -46,6 +49,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sexo = $_POST['sexo']; 
     $fecha_nac = $_POST['fecha_nacimiento'];
     $nuevo_id_curso = $_POST['id_curso'];
+
+    // --- NUEVAS VALIDACIONES ---
+    if (!validarRut($rut)) {
+        $errores[] = "El RUT ingresado no es válido.";
+    }
+    if (!validarSoloLetras($nombres)) {
+        $errores[] = "El nombre solo puede contener letras.";
+    }
+    if (!validarSoloLetras($apellido_paterno)) {
+        $errores[] = "El apellido paterno solo puede contener letras.";
+    }
+    if (!empty($apellido_materno) && !validarSoloLetras($apellido_materno)) {
+        $errores[] = "El apellido materno solo puede contener letras.";
+    }
+
+    // Validación de fecha: Mínimo 2 años de edad
+    if (!empty($fecha_nac)) {
+        $fechaIngresada = new DateTime($fecha_nac);
+        $fechaLimite = new DateTime('-2 years'); // Hoy hace 2 años
+        
+        // Si fecha ingresada es mayor (más reciente) que la fecha límite
+        if ($fechaIngresada > $fechaLimite) {
+            $errores[] = "La fecha de nacimiento es inválida (el estudiante debe tener al menos 2 años).";
+        }
+        if ($fechaIngresada > new DateTime()) {
+             $errores[] = "La fecha de nacimiento no puede ser futura.";
+        }
+    }
+    // ---------------------------
 
     if (empty($rut) || empty($nombres) || empty($apellido_paterno) || empty($sexo)) $errores[] = "Datos obligatorios incompletos.";
 
@@ -102,7 +134,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <form method="POST" class="crud-form">
                         <div class="form-group">
                             <label>RUT:</label>
-                            <input type="text" name="rut" value="<?php echo htmlspecialchars($est['Rut']); ?>" required <?php echo $readonly_attr; ?>>
+                            <input type="text" name="rut" 
+       value="<?php echo htmlspecialchars($est['Rut'] ?? $rut); ?>" 
+       required 
+       placeholder="12.345.678-9"
+       maxlength="12"
+       oninput="darFormatoRut(this)">
                         </div>
                         
                         <div class="form-group">
@@ -157,5 +194,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </section>
         </main>
     </div>
+    <script src="../../js/formato_rut.js"></script>
 </body>
 </html>

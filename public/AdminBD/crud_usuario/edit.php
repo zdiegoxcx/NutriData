@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../../src/config/db.php';
+// INCLUIR ARCHIVO DE VALIDACIONES
+require_once __DIR__ . '/../../../src/config/validaciones.php';
+
 $pdo = getConnection();
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') {
@@ -38,9 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nueva_contrasena = $_POST['contrasena'];
     $rol_id = $_POST['rol_id'];
 
+    // --- NUEVAS VALIDACIONES ---
+    if (!validarRut($rut)) {
+        $errores[] = "El RUT ingresado no es válido (formato o dígito verificador incorrecto).";
+    }
+    if (!validarSoloLetras($nombre)) {
+        $errores[] = "El nombre solo puede contener letras y espacios.";
+    }
+    if (!validarSoloLetras($apellido)) {
+        $errores[] = "El apellido solo puede contener letras y espacios.";
+    }
+    // ---------------------------
+
     if (empty($rut) || empty($nombre) || empty($rol_id)) { 
         $errores[] = "Campos obligatorios faltantes."; 
-    } else {
+    } 
+
+    if (empty($errores)) {
         try {
             if (!empty($nueva_contrasena)) {
                 // ENCRIPTAR LA NUEVA CONTRASEÑA
@@ -99,7 +116,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <form method="POST" class="crud-form">
                         <div style="display:flex; gap:20px;">
-                            <div class="form-group" style="flex:1;"><label>RUT:</label><input type="text" name="rut" value="<?php echo htmlspecialchars($rut); ?>" <?php echo $readonly_attr; ?>></div>
+                            <div class="form-group" style="flex:1;"><label>RUT:</label><input type="text" id="rut" name="rut" 
+                                                                                            value="<?php echo htmlspecialchars($rut); ?>" 
+                                                                                            placeholder="12.345.678-9" 
+                                                                                            required 
+                                                                                            maxlength="12"
+                                                                                            oninput="darFormatoRut(this)"></div>
                             <div class="form-group" style="flex:1;">
                                 <label>Rol:</label>
                                 <select name="rol_id" <?php echo $readonly_attr; ?>>
@@ -141,5 +163,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </section>
         </main>
     </div>
+    <script src="../../js/formato_rut.js"></script>
 </body>
 </html>

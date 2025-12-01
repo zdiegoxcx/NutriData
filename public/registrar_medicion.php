@@ -54,15 +54,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $peso_descuento = floatval($_POST['peso_descuento']);
     $observaciones = trim($_POST['observaciones']);
 
-    // 2. VALIDACIONES DE SEGURIDAD (Sanity Checks)
-    // --- CORRECCIÓN: Límite estricto de 2.00m ---
-    if ($altura < 0.50 || $altura > 2.00) {
-        $errores[] = "La altura está fuera de rango (0.50m - 2.00m). Si usó centímetros (ej: 165), convierta a metros (ej: 1.65).";
+    if ($altura < 0.50 || $altura > 2.10) {
+        $errores[] = "La altura debe estar entre 0.50m y 2.10m.";
     }
-    if ($peso_bruto < 10 || $peso_bruto > 300) {
-        $errores[] = "El peso debe estar entre 10kg y 300kg.";
+
+    // Peso: mayor a 0 y máximo 200 (antes era 300)
+    if ($peso_bruto <= 0 || $peso_bruto > 200) {
+        $errores[] = "El peso debe ser mayor a 0 y máximo 200kg.";
     }
     
+    // Validación Kilos a descontar (Solo números y positivos)
+    // $_POST['peso_descuento'] viene como string del form
+    if (!is_numeric($_POST['peso_descuento']) || $_POST['peso_descuento'] < 0) {
+        $errores[] = "El valor de descuento debe ser un número positivo.";
+    }
+
     $peso_real = $peso_bruto - $peso_descuento;
     if ($peso_real <= 0) {
         $errores[] = "El peso final no puede ser cero o negativo. Revise el descuento.";

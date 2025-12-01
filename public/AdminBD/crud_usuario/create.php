@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../../src/config/db.php';
+
+// AGREGAR ESTA LÍNEA:
+require_once __DIR__ . '/../../../src/config/validaciones.php';
 $pdo = getConnection();
 
 // --- GUARDIÁN DE LA PÁGINA ---
@@ -28,6 +31,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     // --- CAMBIO AQUÍ: Forzar estado a 1 (Activo) ---
     $estado = 1; 
+
+// --- BLOQUE DE VALIDACIONES NUEVO ---
+    if (!validarRut($rut)) {
+        $errores[] = "El RUT ingresado no es válido.";
+    }
+    if (!validarSoloLetras($nombre)) {
+        $errores[] = "El nombre solo puede contener letras.";
+    }
+    if (!validarSoloLetras($apellido)) {
+        $errores[] = "El apellido solo puede contener letras.";
+    }
+    // ------------------------------------
+
+
 
     // Validaciones básicas
     if (empty($rut)) { $errores[] = "El RUT es obligatorio."; }
@@ -111,7 +128,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex: 1;">
                                 <label for="rut">RUT:</label>
-                                <input type="text" id="rut" name="rut" value="<?php echo htmlspecialchars($rut); ?>" placeholder="12345678-9" required>
+                                <input type="text" id="rut" name="rut" 
+       value="<?php echo htmlspecialchars($rut); ?>" 
+       placeholder="12.345.678-9" 
+       required 
+       maxlength="12"
+       oninput="darFormatoRut(this)">
                             </div>
                             <div class="form-group" style="flex: 1;">
                                 <label for="rol_id">Rol:</label>
@@ -164,5 +186,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </section>
         </main>
     </div>
+    <script src="../../js/formato_rut.js"></script>
 </body>
 </html>
