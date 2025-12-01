@@ -213,6 +213,9 @@ textarea {
     font-family: inherit;
     transition: border-color 0.15s, box-shadow 0.15s;
     background-color: #fff;
+    
+    /* --- NUEVA LÍNEA: Evita que se estire y rompa el diseño --- */
+    resize: none; 
 }
 
 input:focus,
