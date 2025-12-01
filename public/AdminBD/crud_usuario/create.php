@@ -126,57 +126,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <form action="create.php" method="POST" class="crud-form">
                         
                         <div style="display: flex; gap: 20px;">
-                            <div class="form-group" style="flex: 1;">
-                                <label for="rut">RUT:</label>
-                                <input type="text" id="rut" name="rut" 
-       value="<?php echo htmlspecialchars($rut); ?>" 
-       placeholder="12.345.678-9" 
-       required 
-       maxlength="12"
-       oninput="darFormatoRut(this)">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="rut">RUT:</label>
+                                    <input type="text" id="rut" name="rut" value="<?php echo htmlspecialchars($rut); ?>" 
+                                        placeholder="12.345.678-9" required maxlength="12" oninput="darFormatoRut(this)">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="rol_id">Rol:</label>
+                                    <select id="rol_id" name="rol_id" required>
+                                        <option value="">Seleccione un rol</option>
+                                        <?php foreach ($roles as $rol): ?>
+                                            <option value="<?php echo $rol['Id']; ?>" <?php echo ($rol['Id'] == $rol_id) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($rol['Nombre']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
                             </div>
-                            <div class="form-group" style="flex: 1;">
-                                <label for="rol_id">Rol:</label>
-                                <select id="rol_id" name="rol_id" required>
-                                    <option value="">Seleccione un rol</option>
-                                    <?php foreach ($roles as $rol): ?>
-                                        <option value="<?php echo $rol['Id']; ?>" <?php echo ($rol['Id'] == $rol_id) ? 'selected' : ''; ?>>
-                                            <?php echo htmlspecialchars($rol['Nombre']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
 
-                        <div style="display: flex; gap: 20px;">
-                            <div class="form-group" style="flex: 1;">
-                                <label for="nombre">Nombre:</label>
-                                <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" required>
+                            <div style="display: flex; gap: 20px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="nombre">Nombre:</label>
+                                    <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" 
+                                        required maxlength="50">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="apellido">Apellido:</label>
+                                    <input type="text" id="apellido" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" 
+                                        required maxlength="50">
+                                </div>
                             </div>
-                            <div class="form-group" style="flex: 1;">
-                                <label for="apellido">Apellido:</label>
-                                <input type="text" id="apellido" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" required>
-                            </div>
-                        </div>
 
-                        <div style="display: flex; gap: 20px;">
-                            <div class="form-group" style="flex: 1;">
-                                <label for="email">Email:</label>
-                                <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>">
+                            <div style="display: flex; gap: 20px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="email">Email:</label>
+                                    <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($email); ?>" 
+                                        maxlength="75">
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="telefono">Teléfono:</label>
+                                    <input type="text" id="telefono" name="telefono" value="<?php echo htmlspecialchars($telefono); ?>" 
+                                        maxlength="30">
+                                </div>
                             </div>
-                            <div class="form-group" style="flex: 1;">
-                                <label for="telefono">Teléfono:</label>
-                                <input type="text" id="telefono" name="telefono" value="<?php echo htmlspecialchars($telefono); ?>">
-                            </div>
-                        </div>
-
-                        <div style="display: flex; gap: 20px;">
-                            <div class="form-group" style="flex: 1;">
-                                <label for="contrasena">Contraseña:</label>
-                                <input type="password" id="contrasena" name="contrasena" required>
-                            </div>
-                            <div style="flex: 1;"></div> 
-                        </div>
 
                         <div class="form-actions" style="margin-top: 20px;">
                             <button type="submit" class="btn-create" style="cursor:pointer;"><i class="fa-solid fa-save"></i> Guardar Usuario</button>

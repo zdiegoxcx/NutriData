@@ -116,12 +116,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <form method="POST" class="crud-form">
                         <div style="display:flex; gap:20px;">
-                            <div class="form-group" style="flex:1;"><label>RUT:</label><input type="text" id="rut" name="rut" 
-                                                                                            value="<?php echo htmlspecialchars($rut); ?>" 
-                                                                                            placeholder="12.345.678-9" 
-                                                                                            required 
-                                                                                            maxlength="12"
-                                                                                            oninput="darFormatoRut(this)"></div>
+                            <div class="form-group" style="flex:1;"><label>RUT:</label>
+                                <input type="text" id="rut" name="rut" 
+                                       value="<?php echo htmlspecialchars($rut); ?>" 
+                                       placeholder="12.345.678-9" 
+                                       required 
+                                       maxlength="12"
+                                       oninput="darFormatoRut(this)">
+                            </div>
                             <div class="form-group" style="flex:1;">
                                 <label>Rol:</label>
                                 <select name="rol_id" <?php echo $readonly_attr; ?>>
@@ -132,12 +134,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                         <div style="display:flex; gap:20px;">
-                            <div class="form-group" style="flex:1;"><label>Nombre:</label><input type="text" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" <?php echo $readonly_attr; ?>></div>
-                            <div class="form-group" style="flex:1;"><label>Apellido:</label><input type="text" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" <?php echo $readonly_attr; ?>></div>
+                            <div class="form-group" style="flex:1;"><label>Nombre:</label>
+                                <input type="text" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" 
+                                       <?php echo $readonly_attr; ?> maxlength="50">
+                            </div>
+                            <div class="form-group" style="flex:1;"><label>Apellido:</label>
+                                <input type="text" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" 
+                                       <?php echo $readonly_attr; ?> maxlength="50">
+                            </div>
                         </div>
                         <div style="display:flex; gap:20px;">
-                            <div class="form-group" style="flex:1;"><label>Email:</label><input type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" <?php echo $readonly_attr; ?>></div>
-                            <div class="form-group" style="flex:1;"><label>Teléfono:</label><input type="text" name="telefono" value="<?php echo htmlspecialchars($telefono); ?>" <?php echo $readonly_attr; ?>></div>
+                            <div class="form-group" style="flex:1;"><label>Email:</label>
+                                <input type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" 
+                                       <?php echo $readonly_attr; ?> maxlength="75">
+                            </div>
+                            <div class="form-group" style="flex:1;"><label>Teléfono:</label>
+                                <input type="text" name="telefono" value="<?php echo htmlspecialchars($telefono); ?>" 
+                                       <?php echo $readonly_attr; ?> maxlength="30">
+                            </div>
                         </div>
                         <div style="display:flex; gap:20px;">
                             <div class="form-group" style="flex:1;"><label>Contraseña:</label><input type="password" name="contrasena" placeholder="Dejar en blanco para mantener" <?php echo $readonly_attr; ?>></div>

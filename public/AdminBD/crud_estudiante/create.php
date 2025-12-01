@@ -146,17 +146,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         <div class="form-group">
                             <label>Nombres:</label>
-                            <input type="text" name="nombres" value="<?php echo htmlspecialchars($nombres); ?>" required>
+                            <input type="text" name="nombres" value="<?php echo htmlspecialchars($nombres); ?>" required maxlength="100">
                         </div>
 
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex:1;">
                                 <label>Apellido Paterno:</label>
-                                <input type="text" name="apellido_paterno" value="<?php echo htmlspecialchars($apellido_paterno); ?>" required>
+                                <input type="text" name="apellido_paterno" value="<?php echo htmlspecialchars($apellido_paterno); ?>" required maxlength="40">
                             </div>
                             <div class="form-group" style="flex:1;">
                                 <label>Apellido Materno:</label>
-                                <input type="text" name="apellido_materno" value="<?php echo htmlspecialchars($apellido_materno); ?>">
+                                <input type="text" name="apellido_materno" value="<?php echo htmlspecialchars($apellido_materno); ?>"required maxlength="40">
                             </div>
                         </div>
 

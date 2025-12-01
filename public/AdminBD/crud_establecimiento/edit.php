@@ -115,11 +115,11 @@ $comunas = $pdo->query("SELECT Id, Comuna, Id_Region FROM Comuna ORDER BY Comuna
                     <form action="edit.php?id=<?php echo $id_establecimiento; ?>" method="POST" class="crud-form">
                         <div class="form-group">
                             <label for="nombre">Nombre del Establecimiento:</label>
-                            <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" required>
+                            <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" required maxlength="200">
                         </div>
                         <div class="form-group">
                             <label for="direccion">Dirección:</label>
-                            <input type="text" id="direccion" name="direccion" value="<?php echo htmlspecialchars($direccion); ?>" required>
+                            <input type="text" id="direccion" name="direccion" value="<?php echo htmlspecialchars($direccion); ?>" required maxlength="200">
                         </div>
                         <div class="form-group">
                             <label for="region_id">Región:</label>

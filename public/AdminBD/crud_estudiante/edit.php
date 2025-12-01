@@ -144,17 +144,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         <div class="form-group">
                             <label>Nombres:</label>
-                            <input type="text" name="nombres" value="<?php echo htmlspecialchars($est['Nombres']); ?>" required <?php echo $readonly_attr; ?>>
+                            <input type="text" name="nombres" value="<?php echo htmlspecialchars($est['Nombres']); ?>" required <?php echo $readonly_attr; ?>required maxlength="100">
                         </div>
 
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex:1;">
                                 <label>Apellido Paterno:</label>
-                                <input type="text" name="apellido_paterno" value="<?php echo htmlspecialchars($est['ApellidoPaterno']); ?>" required <?php echo $readonly_attr; ?>>
+                                <input type="text" name="apellido_paterno" value="<?php echo htmlspecialchars($est['ApellidoPaterno']); ?>" required <?php echo $readonly_attr; ?>required maxlength="40">
                             </div>
                             <div class="form-group" style="flex:1;">
                                 <label>Apellido Materno:</label>
-                                <input type="text" name="apellido_materno" value="<?php echo htmlspecialchars($est['ApellidoMaterno']); ?>" <?php echo $readonly_attr; ?>>
+                                <input type="text" name="apellido_materno" value="<?php echo htmlspecialchars($est['ApellidoMaterno']); ?>" <?php echo $readonly_attr; ?>required maxlength="40">
                             </div>
                         </div>
                         

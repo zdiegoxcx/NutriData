@@ -106,12 +106,12 @@ $comunas = $pdo->query("SELECT Id, Comuna, Id_Region FROM Comuna ORDER BY Comuna
                         
                         <div class="form-group">
                             <label for="nombre">Nombre del Establecimiento:</label>
-                            <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" placeholder="Ej: Liceo Bicentenario" required>
+                            <input type="text" id="nombre" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" placeholder="Ej: Liceo Bicentenario" required maxlength="200">
                         </div>
 
                         <div class="form-group">
                             <label for="direccion">Dirección:</label>
-                            <input type="text" id="direccion" name="direccion" value="<?php echo htmlspecialchars($direccion); ?>" placeholder="Calle y número" required>
+                            <input type="text" id="direccion" name="direccion" value="<?php echo htmlspecialchars($direccion); ?>" placeholder="Calle y número" required maxlength="200">
                         </div>
 
                         <!-- SELECT DE REGIÓN -->
