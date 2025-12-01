@@ -43,3 +43,9 @@ ALTER TABLE Estudiante CHANGE COLUMN Apellido ApellidoPaterno VARCHAR(255);
 
 -- 3. Agregar ApellidoMaterno después de ApellidoPaterno
 ALTER TABLE Estudiante ADD COLUMN ApellidoMaterno VARCHAR(255) AFTER ApellidoPaterno;
+
+
+
+-- ACTUALIZAR CONTRASEÑAS A HASH EN USUARIO
+UPDATE Usuario 
+SET Contraseña = '$2y$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa';
