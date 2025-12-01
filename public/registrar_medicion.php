@@ -245,7 +245,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </main>
     </div>
 
-    <script>
+   <script>
+        // 1. Lógica para calcular IMC en tiempo real (La que ya tenías)
         function calcularIMC() {
             const altura = parseFloat(document.getElementById('altura').value);
             const peso = parseFloat(document.getElementById('peso').value);
@@ -254,6 +255,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (altura > 0 && peso > 0) {
                 divResultado.style.display = 'block';
+                
+                // Validación visual
                 if (altura > 2.10) {
                     divResultado.innerHTML = "<span style='color:#dc3545;'><i class='fa-solid fa-circle-xmark'></i> Altura fuera de rango (Máx 2.10m).</span>";
                     return;
@@ -261,15 +264,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const pesoReal = peso - descuento;
                 const imc = pesoReal / (altura * altura);
                 
-                let color = "#198754";
-                if(imc < 18.5 || imc > 25) color = "#fd7e14"; // Alerta visual si sale de normal
-                if(imc > 30) color = "#dc3545"; // Rojo si es obesidad
+                let color = "#198754"; // Verde
+                // Lógica visual simple para el color (puedes ajustarla)
+                if(imc < 18.5 || imc > 25) color = "#fd7e14"; // Naranja
+                if(imc > 30) color = "#dc3545"; // Rojo
 
                 divResultado.innerHTML = `Peso Real: <strong>${pesoReal.toFixed(2)} kg</strong> | IMC Estimado: <strong style="color:${color}">${imc.toFixed(2)}</strong>`;
             } else {
                 divResultado.style.display = 'none';
             }
         }
+
+        // 2. NUEVA LÓGICA: Bloquear botón al enviar
+        document.getElementById('formMedicion').addEventListener('submit', function(e) {
+            const btn = this.querySelector('button[type="submit"]');
+            
+            // Si el formulario es válido (el navegador ya chequeó los 'required'), procedemos
+            if (this.checkValidity()) {
+                // Cambiamos el texto del botón y lo desactivamos
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando y Enviando...';
+                btn.style.opacity = '0.7';
+                btn.style.cursor = 'wait';
+                
+                // Pequeño truco: Desactivamos el botón justo después de que empiece el envío
+                // para asegurar que el dato POST del submit viaje (aunque en este caso no es vital porque no usas el name del botón)
+                setTimeout(() => {
+                    btn.disabled = true;
+                }, 10);
+            }
+        });
     </script>
+</body>
+</html>
 </body>
 </html>
