@@ -206,3 +206,16 @@ INSERT INTO Alerta (Id_RegistroNutricional, Nombre, Descripcion, Estado) VALUES
 INSERT INTO Alerta (Id_RegistroNutricional, Nombre, Descripcion, Estado) VALUES 
 ((SELECT Id FROM RegistroNutricional WHERE Id_Estudiante = 31 ORDER BY FechaMedicion DESC LIMIT 1), 
 'Riesgo de Malnutrición', 'Obesidad (IMC: 29.38).', 1);
+
+---------------------------
+USE nutridata;
+
+-- Agregar control de borrado a Establecimiento
+ALTER TABLE Establecimiento ADD COLUMN Estado TINYINT(1) DEFAULT 1;
+ALTER TABLE Establecimiento ADD COLUMN FechaEliminacion DATETIME NULL;
+
+-- Agregar control de borrado a Curso
+ALTER TABLE Curso ADD COLUMN Estado TINYINT(1) DEFAULT 1;
+ALTER TABLE Curso ADD COLUMN FechaEliminacion DATETIME NULL;
+
+-- (La tabla Estudiante ya tenía estos campos según tus scripts anteriores)
