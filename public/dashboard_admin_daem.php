@@ -9,10 +9,16 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorDAEM'
     exit;
 }
 
-// --- LÓGICA DE DATOS Y ESTADÍSTICAS ---
+// --- CONFIGURACIÓN DE PAGINACIÓN Y FILTROS ---
+$registros_por_pagina = 10;
+$pagina_actual = isset($_GET['pag']) ? (int)$_GET['pag'] : 1;
+if ($pagina_actual < 1) $pagina_actual = 1;
+$offset = ($pagina_actual - 1) * $registros_por_pagina;
 
-// 1. Obtener Totales Generales (KPIs)
-// Usamos la última medición de cada estudiante para tener el dato más actual
+// Filtro de Estado: Por defecto '1' (Pendientes). Si viene 'todos', mostramos todo.
+$filtro_estado = isset($_GET['ver']) && $_GET['ver'] === 'todos' ? null : 1;
+
+// --- 1. KPIs GENERALES (Se mantienen igual) ---
 $sql_kpi = "
     SELECT 
         COUNT(*) as total_mediciones,
@@ -27,15 +33,9 @@ $sql_kpi = "
 ";
 $stmt_kpi = $pdo->query($sql_kpi);
 $kpis = $stmt_kpi->fetch(PDO::FETCH_ASSOC);
+$porcentaje_riesgo = ($kpis['total_mediciones'] > 0) ? round(($kpis['casos_riesgo'] / $kpis['total_mediciones']) * 100, 1) : 0;
 
-// Evitar división por cero
-$porcentaje_riesgo = ($kpis['total_mediciones'] > 0) 
-    ? round(($kpis['casos_riesgo'] / $kpis['total_mediciones']) * 100, 1) 
-    : 0;
-
-
-// 2. Obtener Datos para Gráfico de Distribución (Estado Nutricional)
-// Clasificación simplificada: Bajo Peso (<18.5), Normal (18.5-24.9), Sobrepeso (25-29.9), Obesidad (>=30)
+// --- 2. GRÁFICO (Se mantiene igual) ---
 $sql_grafico = "
     SELECT 
         CASE 
@@ -56,25 +56,41 @@ $sql_grafico = "
 $stmt_grafico = $pdo->query($sql_grafico);
 $datos_grafico = $stmt_grafico->fetchAll(PDO::FETCH_ASSOC);
 
-// Preparar arrays para Chart.js
-$labels = [];
-$data = [];
-$colores = [];
-
+// Preparar datos Chart.js
+$labels = []; $data = []; $colores = [];
 foreach ($datos_grafico as $fila) {
     $labels[] = $fila['estado'];
     $data[] = $fila['cantidad'];
-    
-    // Asignar colores según estado
     switch($fila['estado']) {
-        case 'Bajo Peso': $colores[] = '#ffc107'; break; // Amarillo
-        case 'Normal': $colores[] = '#198754'; break;    // Verde
-        case 'Sobrepeso': $colores[] = '#fd7e14'; break; // Naranja
-        case 'Obesidad': $colores[] = '#dc3545'; break;  // Rojo
+        case 'Bajo Peso': $colores[] = '#ffc107'; break;
+        case 'Normal': $colores[] = '#198754'; break;
+        case 'Sobrepeso': $colores[] = '#fd7e14'; break;
+        case 'Obesidad': $colores[] = '#dc3545'; break;
     }
 }
 
-// 3. Tabla de Alertas (Últimos casos de riesgo detectados)
+// --- 3. TABLA DE ALERTAS CON PAGINACIÓN Y FILTRO ---
+// Construcción dinámica de la consulta
+$sql_base = "
+    FROM Alerta a
+    JOIN RegistroNutricional r ON a.Id_RegistroNutricional = r.Id
+    JOIN Estudiante e ON r.Id_Estudiante = e.Id
+    JOIN Curso c ON e.Id_Curso = c.Id
+    JOIN Establecimiento est ON c.Id_Establecimiento = est.Id
+";
+
+// Aplicar filtro si no es 'todos'
+$where_clause = "";
+if ($filtro_estado !== null) {
+    $where_clause = "WHERE a.Estado = 1";
+}
+
+// Contar total de registros para la paginación
+$sql_conteo = "SELECT COUNT(*) " . $sql_base . $where_clause;
+$total_registros = $pdo->query($sql_conteo)->fetchColumn();
+$total_paginas = ceil($total_registros / $registros_por_pagina);
+
+// Consulta Final
 $sql_alertas = "
     SELECT 
         a.Id as IdAlerta,
@@ -85,13 +101,9 @@ $sql_alertas = "
         est.Nombre as Establecimiento,
         r.IMC,
         r.FechaMedicion
-    FROM Alerta a
-    JOIN RegistroNutricional r ON a.Id_RegistroNutricional = r.Id
-    JOIN Estudiante e ON r.Id_Estudiante = e.Id
-    JOIN Curso c ON e.Id_Curso = c.Id
-    JOIN Establecimiento est ON c.Id_Establecimiento = est.Id
+    " . $sql_base . $where_clause . "
     ORDER BY a.Estado DESC, r.FechaMedicion DESC
-    LIMIT 10
+    LIMIT $registros_por_pagina OFFSET $offset
 ";
 $stmt_alertas = $pdo->query($sql_alertas);
 
@@ -101,70 +113,44 @@ $stmt_alertas = $pdo->query($sql_alertas);
 <head>
     <meta charset="UTF-8">
     <title>Dashboard DAEM - NutriMonitor</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Estilos específicos para este dashboard */
-        .kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        .kpi-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            border-left: 4px solid #0d6efd;
-        }
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .kpi-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #0d6efd; }
         .kpi-card h3 { font-size: 0.9rem; color: #666; margin-bottom: 10px; }
         .kpi-card .value { font-size: 2rem; font-weight: bold; color: #333; }
         .kpi-card .subtext { font-size: 0.8rem; color: #999; }
+        .charts-container { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
+        .chart-box { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         
-        .charts-container {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-        }
-        .chart-box {
-            flex: 1;
-            min-width: 300px;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        }
+        /* Paginación */
+        .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 20px; }
+        .page-link { padding: 8px 12px; border: 1px solid #ddd; background: white; color: #333; text-decoration: none; border-radius: 4px; }
+        .page-link.active { background: #0d6efd; color: white; border-color: #0d6efd; }
+        .page-link:hover:not(.active) { background: #f1f1f1; }
         
-        .alert-row-danger { background-color: #fff5f5; }
-        .alert-row-warning { background-color: #fff9db; }
+        /* Filtros */
+        .filter-tabs { margin-bottom: 15px; }
+        .filter-tab { padding: 8px 15px; margin-right: 5px; border-radius: 20px; text-decoration: none; font-size: 0.9rem; font-weight: 500; }
+        .filter-tab.active { background-color: #0d6efd; color: white; }
+        .filter-tab.inactive { background-color: #e9ecef; color: #666; }
     </style>
 </head>
 <body>
     <div class="dashboard-wrapper">
-        
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <h2>DAEM NutriMonitor</h2>
-            </div>
+            <div class="sidebar-header"><h2>DAEM NutriMonitor</h2></div>
             <nav class="sidebar-nav">
                 <div class="nav-category">Reportes</div>
-                <a href="dashboard_admin_daem.php" class="nav-item active">
-                    <i class="fa-solid fa-chart-pie"></i> Panorama General
-                </a>
-                <a href="#" class="nav-item" style="opacity: 0.5; cursor: not-allowed;" title="Próximamente">
-                    <i class="fa-solid fa-file-pdf"></i> Exportar Informes
-                </a>
+                <a href="dashboard_admin_daem.php" class="nav-item active"><i class="fa-solid fa-chart-pie"></i> Panorama General</a>
             </nav>
         </aside>
 
         <main class="main-content">
             <header class="header">
-                <div class="header-user">
-                    <?php echo htmlspecialchars($_SESSION['user_nombre']); ?> (DAEM)
-                </div>
+                <div class="header-user"><?php echo htmlspecialchars($_SESSION['user_nombre']); ?> (DAEM)</div>
                 <a href="logout.php" class="btn-logout">Cerrar Sesión</a>
             </header>
 
@@ -173,7 +159,7 @@ $stmt_alertas = $pdo->query($sql_alertas);
                     
                     <div class="content-header-with-btn">
                         <h1><i class="fa-solid fa-chart-line"></i> Estado Nutricional Comunal</h1>
-                        </div>
+                    </div>
 
                     <div class="kpi-grid">
                         <div class="kpi-card">
@@ -194,56 +180,79 @@ $stmt_alertas = $pdo->query($sql_alertas);
                     </div>
 
                     <div class="charts-container">
-                        <div class="chart-box">
-                            <h3>Distribución del Estado Nutricional</h3>
+                        <div class="chart-box" style="flex: 0 0 350px;">
+                            <h3>Distribución Nutricional</h3>
                             <canvas id="graficoNutricional"></canvas>
                         </div>
-                        <div class="chart-box">
-                            <h3>Alertas Recientes (Últimos 10)</h3>
-                            <div class="table-responsive" style="margin-top: 15px;">
+
+                        <div class="chart-box" style="flex: 1;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                                <h3>Gestión de Alertas</h3>
+                                <div class="filter-tabs">
+                                    <a href="?ver=pendientes" class="filter-tab <?php echo ($filtro_estado === 1) ? 'active' : 'inactive'; ?>">Pendientes</a>
+                                    <a href="?ver=todos" class="filter-tab <?php echo ($filtro_estado === null) ? 'active' : 'inactive'; ?>">Historial Completo</a>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Estado</th> <th>Estudiante</th>
+                                            <th>Estado</th>
+                                            <th>Estudiante</th>
                                             <th>Establecimiento</th>
                                             <th>IMC</th>
                                             <th>Fecha</th>
-                                            <th>Acción</th> </tr>
+                                            <th>Acción</th>
+                                        </tr>
                                     </thead>
                                     <tbody>
                                         <?php while($alerta = $stmt_alertas->fetch(PDO::FETCH_ASSOC)): 
-                                            // Lógica de colores según gravedad
                                             $color_imc = ($alerta['IMC'] >= 30 || $alerta['IMC'] < 16) ? '#dc3545' : '#fd7e14';
-                                            
-                                            // Icono de estado
                                             $icono_estado = ($alerta['Estado'] == 1) 
-                                                ? '<span class="status-inactive" title="Pendiente">Pendiente</span>' 
-                                                : '<span class="status-active" title="Atendida">Atendida</span>';
+                                                ? '<span class="status-inactive" style="font-size:0.75rem;">Pendiente</span>' 
+                                                : '<span class="status-active" style="font-size:0.75rem;">Atendida</span>';
                                         ?>
                                         <tr>
                                             <td><?php echo $icono_estado; ?></td>
                                             <td><?php echo htmlspecialchars($alerta['Estudiante']); ?></td>
                                             <td><?php echo htmlspecialchars($alerta['Establecimiento']); ?></td>
-                                            <td style="font-weight: bold; color: <?php echo $color_imc; ?>">
-                                                <?php echo htmlspecialchars($alerta['IMC']); ?>
-                                            </td>
+                                            <td style="font-weight: bold; color: <?php echo $color_imc; ?>"><?php echo $alerta['IMC']; ?></td>
                                             <td><?php echo date("d/m/Y", strtotime($alerta['FechaMedicion'])); ?></td>
                                             <td class="actions">
-                                                <a href="AdminDAEM/gestionar_alerta.php?id=<?php echo $alerta['IdAlerta']; ?>" class="btn-action btn-edit" title="Gestionar Caso">
+                                                <a href="AdminDAEM/gestionar_alerta.php?id=<?php echo $alerta['IdAlerta']; ?>" class="btn-action btn-edit" title="Gestionar">
                                                     <i class="fa-solid fa-file-pen"></i>
                                                 </a>
                                             </td>
                                         </tr>
                                         <?php endwhile; ?>
                                         <?php if($stmt_alertas->rowCount() == 0): ?>
-                                            <tr><td colspan="6" style="text-align:center;">No hay alertas recientes.</td></tr>
+                                            <tr><td colspan="6" style="text-align:center; padding:20px;">¡Excelente! No hay alertas pendientes.</td></tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
                             </div>
+
+                            <?php if ($total_paginas > 1): ?>
+                            <div class="pagination">
+                                <?php if ($pagina_actual > 1): ?>
+                                    <a href="?pag=<?php echo $pagina_actual - 1; ?>&ver=<?php echo $filtro_estado === null ? 'todos' : 'pendientes'; ?>" class="page-link">&laquo; Anterior</a>
+                                <?php endif; ?>
+
+                                <?php for ($i = 1; $i <= $total_paginas; $i++): ?>
+                                    <a href="?pag=<?php echo $i; ?>&ver=<?php echo $filtro_estado === null ? 'todos' : 'pendientes'; ?>" class="page-link <?php echo ($i == $pagina_actual) ? 'active' : ''; ?>">
+                                        <?php echo $i; ?>
+                                    </a>
+                                <?php endfor; ?>
+
+                                <?php if ($pagina_actual < $total_paginas): ?>
+                                    <a href="?pag=<?php echo $pagina_actual + 1; ?>&ver=<?php echo $filtro_estado === null ? 'todos' : 'pendientes'; ?>" class="page-link">Siguiente &raquo;</a>
+                                <?php endif; ?>
+                            </div>
+                            <?php endif; ?>
+
                         </div>
                     </div>
-
                 </div>
             </section>
         </main>
@@ -252,11 +261,10 @@ $stmt_alertas = $pdo->query($sql_alertas);
     <script>
         const ctx = document.getElementById('graficoNutricional').getContext('2d');
         const graficoNutricional = new Chart(ctx, {
-            type: 'doughnut', // Gráfico de dona
+            type: 'doughnut',
             data: {
                 labels: <?php echo json_encode($labels); ?>,
                 datasets: [{
-                    label: 'Estudiantes',
                     data: <?php echo json_encode($data); ?>,
                     backgroundColor: <?php echo json_encode($colores); ?>,
                     borderWidth: 1
@@ -264,11 +272,7 @@ $stmt_alertas = $pdo->query($sql_alertas);
             },
             options: {
                 responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                    }
-                }
+                plugins: { legend: { position: 'bottom' } }
             }
         });
     </script>
