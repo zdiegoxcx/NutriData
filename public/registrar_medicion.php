@@ -16,7 +16,8 @@ $tipo_mensaje = '';
 
 // 1. Verificar estudiante y obtener datos (INCLUYENDO Id_Curso PARA EL BOTÓN VOLVER)
 if ($id_estudiante) {
-    $stmt = $pdo->prepare("SELECT Nombre, Apellido, Rut, FechaNacimiento, Id_Curso FROM Estudiante WHERE Id = ?");
+    // CAMBIO: Se solicitan las nuevas columnas Nombres, ApellidoPaterno, ApellidoMaterno
+    $stmt = $pdo->prepare("SELECT Nombres, ApellidoPaterno, ApellidoMaterno, Rut, FechaNacimiento, Id_Curso FROM Estudiante WHERE Id = ?");
     $stmt->execute([$id_estudiante]);
     $estudiante = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -143,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <section class="content-body">
                 <div class="content-container">
                     <h1><i class="fa-solid fa-weight-scale"></i> Nueva Medición</h1>
-                    <h3>Estudiante: <?php echo htmlspecialchars($estudiante['Nombre'] . " " . $estudiante['Apellido']); ?></h3>
+                    <h3>Estudiante: <?php echo htmlspecialchars($estudiante['Nombres'] . " " . $estudiante['ApellidoPaterno'] . " " . $estudiante['ApellidoMaterno']); ?></h3>
                     <p style="color:#666;">RUT: <?php echo htmlspecialchars($estudiante['Rut']); ?></p>
                     <hr>
 

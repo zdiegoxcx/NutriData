@@ -102,11 +102,12 @@ $stmt_c = $pdo->prepare($sql_conteo); $stmt_c->execute($params_a);
 $total_regs = $stmt_c->fetchColumn();
 $total_pags = ceil($total_regs / $registros_por_pagina);
 
-// Consulta Final
+// Consulta Final - CAMBIO AQUÍ: CONCAT_WS para el nombre completo
 $sql_alertas = "
     SELECT 
         a.Id as IdAlerta, a.Estado, 
-        e.Nombre as Estudiante, est.Nombre as Establecimiento, 
+        CONCAT_WS(' ', e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno) as Estudiante,
+        est.Nombre as Establecimiento, 
         r.IMC, r.FechaMedicion, r.Diagnostico 
     " . $sql_base_alertas . $where_a . " 
     ORDER BY a.Estado DESC, r.FechaMedicion DESC 
@@ -150,11 +151,9 @@ $stmt_alertas->execute($params_a);
                 <div class="content-container" style="background:transparent; box-shadow:none; padding:0;">
                     <h1><i class="fa-solid fa-chart-line"></i> Monitor Nutricional</h1>
                     
-                    <!-- BARRA DE FILTROS (Mantiene los valores al recargar) -->
                     <div class="top-filters">
                         <i class="fa-solid fa-filter" style="color:#666;"></i>
                         <form style="display:flex; gap:10px; flex-grow:1;" method="GET">
-                            <!-- Mantenemos la pestaña actual -->
                             <?php if(isset($_GET['ver'])): ?><input type="hidden" name="ver" value="<?php echo htmlspecialchars($_GET['ver']); ?>"><?php endif; ?>
                             
                             <select name="colegio" onchange="this.form.submit()" style="padding:8px; border:1px solid #ddd; border-radius:4px;">
@@ -174,7 +173,6 @@ $stmt_alertas->execute($params_a);
                         </form>
                     </div>
 
-                    <!-- KPIs -->
                     <div class="kpi-grid">
                         <div class="kpi-card"><h3>Total Alumnos</h3><div class="value"><?php echo $kpis['total']; ?></div></div>
                         <div class="kpi-card" style="border-left-color:#198754;"><h3>Promedio IMC</h3><div class="value"><?php echo number_format($kpis['prom_imc'],1); ?></div></div>
@@ -190,7 +188,6 @@ $stmt_alertas->execute($params_a);
                             <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid #eee;">
                                 <h3>Alertas</h3>
                                 <div class="filter-tabs">
-                                    <!-- ENLACES INTELIGENTES: Usamos buildUrl para no perder filtros -->
                                     <a href="<?php echo buildUrl(['ver' => 'pendientes', 'pag' => 1]); ?>" 
                                        class="<?php echo $filtro_estado === 1 ? 'active' : ''; ?>">
                                        Pendientes
@@ -224,7 +221,6 @@ $stmt_alertas->execute($params_a);
                                 </table>
                             </div>
 
-                            <!-- Paginación Inteligente -->
                             <?php if ($total_pags > 1): ?>
                             <div class="pagination">
                                 <?php for($i=1; $i<=$total_pags; $i++): ?>

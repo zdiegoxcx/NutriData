@@ -34,11 +34,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // --- OBTENER DATOS DE LA ALERTA (GET) ---
 // Hacemos JOINs para mostrar contexto completo: Quién es el alumno, qué colegio, etc.
+// CAMBIO AQUÍ: CONCAT_WS para usar Nombres y Apellidos nuevos
 $sql = "
     SELECT 
         a.Id, a.Nombre as TituloAlerta, a.Descripcion, a.Estado, a.ObservacionesSeguimiento,
         r.IMC, r.Peso, r.Altura, r.FechaMedicion,
-        e.Nombre as Estudiante, e.Rut,
+        CONCAT_WS(' ', e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno) as Estudiante,
+        e.Rut,
         c.Nombre as Curso,
         est.Nombre as Establecimiento,
         u.Nombre as ProfeNombre, u.Apellido as ProfeApellido

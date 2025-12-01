@@ -18,7 +18,7 @@ if ($id_establecimiento) {
     $stmt = $pdo->prepare("SELECT Id FROM Establecimiento WHERE Id = ? AND Estado = 1");
     $stmt->execute([$id_establecimiento]);
     if (!$stmt->fetch()) {
-        header("Location: dashboard_admin_bd.php"); // Si no existe o está borrado, volver al inicio
+        header("Location: dashboard_admin_bd.php"); 
         exit;
     }
 }
@@ -152,13 +152,16 @@ if (isset($_GET['action'])) {
                         echo '</nav>';
 
                         if ($id_establecimiento && $id_curso) {
-                            // VISTA ESTUDIANTES
+                            // VISTA ESTUDIANTES (ACTUALIZADA)
                             echo '<div class="content-header-with-btn"><h1><i class="fa-solid fa-children"></i> Estudiantes</h1><a href="AdminBD/crud_estudiante/create.php?id_curso='.$id_curso.'" class="btn-create"><i class="fa-solid fa-plus"></i> Crear</a></div>';
-                            $stmt = $pdo->prepare("SELECT Id, Rut, Nombre, Apellido, FechaNacimiento FROM Estudiante WHERE Id_Curso = ? AND Estado = 1 ORDER BY Apellido, Nombre");
+                            // CONSULTA ACTUALIZADA
+                            $stmt = $pdo->prepare("SELECT Id, Rut, Nombres, ApellidoPaterno, ApellidoMaterno, FechaNacimiento FROM Estudiante WHERE Id_Curso = ? AND Estado = 1 ORDER BY ApellidoPaterno, ApellidoMaterno, Nombres");
                             $stmt->execute([$id_curso]);
-                            echo "<div class='table-responsive'><table><thead><tr><th>RUT</th><th>Nombre</th><th>Fecha Nac.</th><th></th></tr></thead><tbody>";
+                            echo "<div class='table-responsive'><table><thead><tr><th>RUT</th><th>Nombre Completo</th><th>Fecha Nac.</th><th></th></tr></thead><tbody>";
                             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                                echo "<tr><td>".htmlspecialchars($row['Rut'])."</td><td>".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."</td><td>".htmlspecialchars($row['FechaNacimiento'])."</td><td class='menu-column'><div class='dropdown'><button class='btn-dots' onclick=\"toggleMenu(event, 's".$row['Id']."')\"><i class='fa-solid fa-ellipsis-vertical'></i></button><div id='menu-s".$row['Id']."' class='dropdown-menu'><a href='AdminBD/crud_estudiante/edit.php?id=".$row['Id']."'><i class='fa-solid fa-pencil'></i> Editar</a><a href='javascript:void(0);' class='danger-action' onclick=\"openDeleteModal('estudiante', ".$row['Id'].", '".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."', '$id_establecimiento', '$id_curso')\"><i class='fa-solid fa-trash-can'></i> Eliminar</a></div></div></td></tr>";
+                                // CONCATENACIÓN ACTUALIZADA
+                                $nombreCompleto = htmlspecialchars($row['Nombres'] . ' ' . $row['ApellidoPaterno'] . ' ' . $row['ApellidoMaterno']);
+                                echo "<tr><td>".htmlspecialchars($row['Rut'])."</td><td>".$nombreCompleto."</td><td>".htmlspecialchars($row['FechaNacimiento'])."</td><td class='menu-column'><div class='dropdown'><button class='btn-dots' onclick=\"toggleMenu(event, 's".$row['Id']."')\"><i class='fa-solid fa-ellipsis-vertical'></i></button><div id='menu-s".$row['Id']."' class='dropdown-menu'><a href='AdminBD/crud_estudiante/edit.php?id=".$row['Id']."'><i class='fa-solid fa-pencil'></i> Editar</a><a href='javascript:void(0);' class='danger-action' onclick=\"openDeleteModal('estudiante', ".$row['Id'].", '".$nombreCompleto."', '$id_establecimiento', '$id_curso')\"><i class='fa-solid fa-trash-can'></i> Eliminar</a></div></div></td></tr>";
                             }
                             echo "</tbody></table></div>";
 
@@ -217,7 +220,6 @@ if (isset($_GET['action'])) {
     <script>
         var globalVista = '<?php echo $vista; ?>';
         
-        // --- SOLUCIÓN PARA PROBLEMA DE "VOLVER ATRÁS" (Cache Buster) ---
         window.addEventListener('pageshow', function(event) {
             if (event.persisted) {
                 window.location.reload(); 

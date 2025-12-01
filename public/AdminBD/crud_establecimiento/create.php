@@ -138,7 +138,7 @@ $comunas = $pdo->query("SELECT Id, Comuna, Id_Region FROM Comuna ORDER BY Comuna
 
                         <div class="form-actions" style="margin-top: 20px;">
                             <button type="submit" class="btn-create" style="cursor:pointer;"><i class="fa-solid fa-save"></i> Guardar</button>
-                            <a href="../dashboard_admin_bd.php?vista=estudiantes" class="btn-delete" style="padding: 8px 15px; margin-left: 10px;">Cancelar</a>
+                            
                         </div>
                     </form>
                 </div>

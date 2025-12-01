@@ -28,19 +28,21 @@ if (!$contexto) die("Curso no válido.");
 
 $id_establecimiento = $contexto['Id_Establecimiento'];
 $errores = [];
-$rut = $nombre = $apellido = $fecha_nac = $sexo = '';
+$rut = $nombres = $apellido_paterno = $apellido_materno = $fecha_nac = $sexo = '';
 
 // 3. Procesar Formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $rut = trim($_POST['rut']);
-    $nombre = trim($_POST['nombre']);
-    $apellido = trim($_POST['apellido']);
-    $sexo = $_POST['sexo']; // NUEVO CAMPO
+    $nombres = trim($_POST['nombres']);
+    $apellido_paterno = trim($_POST['apellido_paterno']);
+    $apellido_materno = trim($_POST['apellido_materno']);
+    $sexo = $_POST['sexo']; 
     $fecha_nac = $_POST['fecha_nacimiento'];
 
     if (empty($rut)) $errores[] = "RUT obligatorio.";
-    if (empty($nombre)) $errores[] = "Nombre obligatorio.";
-    if (empty($sexo)) $errores[] = "Debe seleccionar el sexo."; // VALIDACIÓN
+    if (empty($nombres)) $errores[] = "Nombres obligatorios.";
+    if (empty($apellido_paterno)) $errores[] = "Apellido Paterno obligatorio.";
+    if (empty($sexo)) $errores[] = "Debe seleccionar el sexo.";
 
     // Validar duplicado
     $check = $pdo->prepare("SELECT Id FROM Estudiante WHERE Rut = ?");
@@ -50,9 +52,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errores)) {
         try {
             // INSERT ACTUALIZADO
-            $sql = "INSERT INTO Estudiante (Id_Curso, Rut, Nombre, Apellido, Sexo, FechaNacimiento, Estado) VALUES (?, ?, ?, ?, ?, ?, 1)";
+            $sql = "INSERT INTO Estudiante (Id_Curso, Rut, Nombres, ApellidoPaterno, ApellidoMaterno, Sexo, FechaNacimiento, Estado) VALUES (?, ?, ?, ?, ?, ?, ?, 1)";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$id_curso, $rut, $nombre, $apellido, $sexo, $fecha_nac]);
+            $stmt->execute([$id_curso, $rut, $nombres, $apellido_paterno, $apellido_materno, $sexo, $fecha_nac]);
             
             $_SESSION['success_message'] = "Estudiante registrado exitosamente.";
             header("Location: ../../dashboard_admin_bd.php?vista=estudiantes&id_establecimiento=$id_establecimiento&id_curso=$id_curso");
@@ -107,14 +109,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </div>
                         </div>
                         
+                        <div class="form-group">
+                            <label>Nombres:</label>
+                            <input type="text" name="nombres" value="<?php echo htmlspecialchars($nombres); ?>" required>
+                        </div>
+
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex:1;">
-                                <label>Nombre:</label>
-                                <input type="text" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" required>
+                                <label>Apellido Paterno:</label>
+                                <input type="text" name="apellido_paterno" value="<?php echo htmlspecialchars($apellido_paterno); ?>" required>
                             </div>
                             <div class="form-group" style="flex:1;">
-                                <label>Apellido:</label>
-                                <input type="text" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" required>
+                                <label>Apellido Materno:</label>
+                                <input type="text" name="apellido_materno" value="<?php echo htmlspecialchars($apellido_materno); ?>">
                             </div>
                         </div>
 

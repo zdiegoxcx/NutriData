@@ -32,3 +32,14 @@ UPDATE RegistroNutricional SET Diagnostico = CASE
     WHEN IMC >= 30 THEN 'Obesidad'
     ELSE 'Normal'
 END WHERE Diagnostico IS NULL;
+
+
+
+-- 1. Renombrar Nombre a Nombres
+ALTER TABLE Estudiante CHANGE COLUMN Nombre Nombres VARCHAR(255);
+
+-- 2. Renombrar Apellido a ApellidoPaterno
+ALTER TABLE Estudiante CHANGE COLUMN Apellido ApellidoPaterno VARCHAR(255);
+
+-- 3. Agregar ApellidoMaterno después de ApellidoPaterno
+ALTER TABLE Estudiante ADD COLUMN ApellidoMaterno VARCHAR(255) AFTER ApellidoPaterno;

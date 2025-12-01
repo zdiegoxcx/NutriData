@@ -28,7 +28,6 @@ $id_estudiante = $_GET['id_estudiante'] ?? null;
 
 <div class="dashboard-wrapper">
 
-    <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="sidebar-header">
             <h2>NutriData</h2>
@@ -45,10 +44,8 @@ $id_estudiante = $_GET['id_estudiante'] ?? null;
     </aside>
 
 
-    <!-- CONTENIDO -->
     <main class="main-content">
 
-        <!-- HEADER -->
         <header class="header">
             <div class="header-user">
                 <?= htmlspecialchars($_SESSION['user_nombre']); ?>
@@ -117,7 +114,7 @@ $id_estudiante = $_GET['id_estudiante'] ?? null;
 
 
             // ===========================================================
-            //            VISTA: ESTUDIANTES DEL CURSO
+            //            VISTA: ESTUDIANTES DEL CURSO (ACTUALIZADO)
             // ===========================================================
             elseif ($vista === 'estudiantes' && $id_curso) {
 
@@ -125,11 +122,12 @@ $id_estudiante = $_GET['id_estudiante'] ?? null;
                 echo "<h1><i class='fa-solid fa-children'></i> Estudiantes</h1>";
                 echo "</div>";
 
+                // CONSULTA ACTUALIZADA
                 $stmt = $pdo->prepare("
-                    SELECT Id, Rut, Nombre, Apellido
+                    SELECT Id, Rut, Nombres, ApellidoPaterno, ApellidoMaterno
                     FROM Estudiante
                     WHERE Id_Curso = ?
-                    ORDER BY Apellido, Nombre
+                    ORDER BY ApellidoPaterno, ApellidoMaterno, Nombres
                 ");
                 $stmt->execute([$id_curso]);
 
@@ -138,16 +136,19 @@ $id_estudiante = $_GET['id_estudiante'] ?? null;
                       <thead>
                         <tr>
                             <th>RUT</th>
-                            <th>Nombre</th>
+                            <th>Nombre Completo</th>
                             <th>Acciones</th>
                         </tr>
                       </thead>
                       <tbody>";
 
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                    // CONCATENACIÓN ACTUALIZADA
+                    $nombreFull = $row['Nombres'] . ' ' . $row['ApellidoPaterno'] . ' ' . $row['ApellidoMaterno'];
+                    
                     echo "<tr>
                           <td>".htmlspecialchars($row['Rut'])."</td>
-                          <td>".htmlspecialchars($row['Nombre'].' '.$row['Apellido'])."</td>
+                          <td>".htmlspecialchars($nombreFull)."</td>
                           <td class='actions'>
                             <a class='btn-action btn-view'
                                href='dashboard_profesor.php?vista=mediciones&id_estudiante=".$row['Id']."'>
@@ -210,8 +211,7 @@ $id_estudiante = $_GET['id_estudiante'] ?? null;
 
             ?>
 
-            </div> <!-- content-container -->
-        </section>
+            </div> </section>
 
     </main>
 </div>

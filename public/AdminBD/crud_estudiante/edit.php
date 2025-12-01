@@ -11,7 +11,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') 
 $id = $_GET['id'] ?? null;
 if (!$id) { header("Location: ../../dashboard_admin_bd.php"); exit; }
 
-// Obtener datos (incluyendo Sexo)
+// Obtener datos (Campos actualizados)
 $stmt = $pdo->prepare("SELECT e.*, c.Id_Establecimiento FROM Estudiante e JOIN Curso c ON e.Id_Curso = c.Id WHERE e.Id = ?");
 $stmt->execute([$id]);
 $est = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -23,7 +23,7 @@ $id_establecimiento = $est['Id_Establecimiento'];
 
 // --- VERIFICAR SI ESTÁ ACTIVO O ELIMINADO ---
 $es_activo = ($est['Estado'] == 1);
-$readonly_attr = $es_activo ? '' : 'disabled'; // Variable para bloquear inputs
+$readonly_attr = $es_activo ? '' : 'disabled';
 
 // Listado de cursos
 $cursos = $pdo->prepare("SELECT Id, Nombre FROM Curso WHERE Id_Establecimiento = ? ORDER BY Nombre");
@@ -33,29 +33,28 @@ $lista_cursos = $cursos->fetchAll(PDO::FETCH_ASSOC);
 $errores = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // --- BLOQUEO DE SEGURIDAD ---
     if (!$es_activo) {
         $_SESSION['error'] = "No se puede editar un estudiante que está en la papelera.";
         header("Location: ../../dashboard_admin_bd.php?vista=estudiantes&id_establecimiento=$id_establecimiento&id_curso=$id_curso");
         exit;
     }
 
-    $nombre = trim($_POST['nombre']);
-    $apellido = trim($_POST['apellido']);
+    $nombres = trim($_POST['nombres']);
+    $apellido_paterno = trim($_POST['apellido_paterno']);
+    $apellido_materno = trim($_POST['apellido_materno']);
     $rut = trim($_POST['rut']);
     $sexo = $_POST['sexo']; 
     $fecha_nac = $_POST['fecha_nacimiento'];
     $nuevo_id_curso = $_POST['id_curso'];
-    // El estado YA NO se recibe por POST, se mantiene el actual
 
-    if (empty($rut) || empty($nombre) || empty($sexo)) $errores[] = "Datos incompletos.";
+    if (empty($rut) || empty($nombres) || empty($apellido_paterno) || empty($sexo)) $errores[] = "Datos obligatorios incompletos.";
 
     if (empty($errores)) {
         try {
-            // UPDATE SIN CAMBIAR EL ESTADO
-            $sql = "UPDATE Estudiante SET Nombre=?, Apellido=?, Rut=?, Sexo=?, FechaNacimiento=?, Id_Curso=? WHERE Id=?";
+            // UPDATE ACTUALIZADO
+            $sql = "UPDATE Estudiante SET Nombres=?, ApellidoPaterno=?, ApellidoMaterno=?, Rut=?, Sexo=?, FechaNacimiento=?, Id_Curso=? WHERE Id=?";
             $stmt = $pdo->prepare($sql);
-            $stmt->execute([$nombre, $apellido, $rut, $sexo, $fecha_nac, $nuevo_id_curso, $id]);
+            $stmt->execute([$nombres, $apellido_paterno, $apellido_materno, $rut, $sexo, $fecha_nac, $nuevo_id_curso, $id]);
             
             $_SESSION['success_message'] = "Estudiante actualizado correctamente.";
             header("Location: ../../dashboard_admin_bd.php?vista=estudiantes&id_establecimiento=$id_establecimiento&id_curso=$nuevo_id_curso");
@@ -105,14 +104,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <label>RUT:</label>
                             <input type="text" name="rut" value="<?php echo htmlspecialchars($est['Rut']); ?>" required <?php echo $readonly_attr; ?>>
                         </div>
+                        
+                        <div class="form-group">
+                            <label>Nombres:</label>
+                            <input type="text" name="nombres" value="<?php echo htmlspecialchars($est['Nombres']); ?>" required <?php echo $readonly_attr; ?>>
+                        </div>
+
                         <div style="display: flex; gap: 20px;">
                             <div class="form-group" style="flex:1;">
-                                <label>Nombre:</label>
-                                <input type="text" name="nombre" value="<?php echo htmlspecialchars($est['Nombre']); ?>" required <?php echo $readonly_attr; ?>>
+                                <label>Apellido Paterno:</label>
+                                <input type="text" name="apellido_paterno" value="<?php echo htmlspecialchars($est['ApellidoPaterno']); ?>" required <?php echo $readonly_attr; ?>>
                             </div>
                             <div class="form-group" style="flex:1;">
-                                <label>Apellido:</label>
-                                <input type="text" name="apellido" value="<?php echo htmlspecialchars($est['Apellido']); ?>" required <?php echo $readonly_attr; ?>>
+                                <label>Apellido Materno:</label>
+                                <input type="text" name="apellido_materno" value="<?php echo htmlspecialchars($est['ApellidoMaterno']); ?>" <?php echo $readonly_attr; ?>>
                             </div>
                         </div>
                         
