@@ -175,13 +175,16 @@ if (isset($_GET['action'])) {
                         }
                         echo "</tbody></table></div>";
 
-                        // Paginador
+                        // Paginador Inteligente
                         if ($total_pags > 1) {
                             echo '<div class="pagination">';
-                            for ($i=1; $i<=$total_pags; $i++) {
-                                echo '<a href="'.buildUrl(['pag' => $i]).'" class="page-link '.($i==$pagina_actual?'active':'').'">'.$i.'</a>';
-                            }
-                            echo '</div><div class="page-info">Página '.$pagina_actual.' de '.$total_pags.'</div>';
+                            $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
+                            if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                            if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                            for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                            if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                            if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                            echo '</div><div class="page-info">Página '.$actual.' de '.$total.'</div>';
                         }
 
                     } else {
@@ -219,10 +222,16 @@ if (isset($_GET['action'])) {
                             }
                             echo "</tbody></table></div>";
 
+                            // Paginador Inteligente
                             if ($total_pags > 1) {
                                 echo '<div class="pagination">';
-                                for ($i=1; $i<=$total_pags; $i++) echo '<a href="'.buildUrl(['pag' => $i]).'" class="page-link '.($i==$pagina_actual?'active':'').'">'.$i.'</a>';
-                                echo '</div><div class="page-info">Página '.$pagina_actual.' de '.$total_pags.'</div>';
+                                $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
+                                if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                                if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                                for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                                if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                                if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                                echo '</div><div class="page-info">Página '.$actual.' de '.$total.'</div>';
                             }
 
                         // =================================================================================
@@ -247,10 +256,16 @@ if (isset($_GET['action'])) {
                             }
                             echo "</tbody></table></div>";
 
+                            // Paginador Inteligente
                             if ($total_pags > 1) {
                                 echo '<div class="pagination">';
-                                for ($i=1; $i<=$total_pags; $i++) echo '<a href="'.buildUrl(['pag' => $i]).'" class="page-link '.($i==$pagina_actual?'active':'').'">'.$i.'</a>';
-                                echo '</div><div class="page-info">Página '.$pagina_actual.' de '.$total_pags.'</div>';
+                                $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
+                                if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                                if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                                for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                                if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                                if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                                echo '</div><div class="page-info">Página '.$actual.' de '.$total.'</div>';
                             }
 
                         // =================================================================================
@@ -273,10 +288,16 @@ if (isset($_GET['action'])) {
                             }
                             echo "</tbody></table></div>";
 
+                            // Paginador Inteligente
                             if ($total_pags > 1) {
                                 echo '<div class="pagination">';
-                                for ($i=1; $i<=$total_pags; $i++) echo '<a href="'.buildUrl(['pag' => $i]).'" class="page-link '.($i==$pagina_actual?'active':'').'">'.$i.'</a>';
-                                echo '</div><div class="page-info">Página '.$pagina_actual.' de '.$total_pags.'</div>';
+                                $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
+                                if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                                if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                                for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                                if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                                if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                                echo '</div><div class="page-info">Página '.$actual.' de '.$total.'</div>';
                             }
                         }
                     }

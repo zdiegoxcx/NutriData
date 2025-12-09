@@ -21,7 +21,6 @@ if ($pagina_actual < 1) $pagina_actual = 1;
 $offset = ($pagina_actual - 1) * $registros_por_pagina;
 
 // --- FUNCIÓN HELPER PARA URLS ---
-// Mantiene los filtros actuales (id_curso, id_estudiante, vista) al cambiar de página
 function buildUrl($params = []) {
     $currentParams = $_GET;
     $merged = array_merge($currentParams, $params);
@@ -51,6 +50,18 @@ function buildUrl($params = []) {
         .page-link:hover { background-color: #f8f9fa; }
         .page-link.active { background: #4361ee; color: white; border-color: #4361ee; }
         .page-info { text-align: center; margin-top: 10px; color: #888; font-size: 0.85rem; }
+
+        /* ESTILOS PARA FILAS CLICKEABLES (Igual que Admin BD) */
+        .clickable-row {
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .clickable-row:hover {
+            background-color: #f1f5f9; /* Color de fondo al pasar el mouse */
+        }
+        .clickable-row td {
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -104,7 +115,7 @@ function buildUrl($params = []) {
                 echo "<h1><i class='fa-solid fa-chalkboard'></i> Mis Cursos Asignados</h1>";
                 echo '</div>';
 
-                // 1. Contar Total Cursos (Para Paginación)
+                // 1. Contar Total Cursos
                 $sql_count = "SELECT COUNT(*) FROM Curso WHERE Id_Profesor = ? AND Estado = 1";
                 $stmt_c = $pdo->prepare($sql_count);
                 $stmt_c->execute([$_SESSION['user_id']]);
@@ -128,7 +139,6 @@ function buildUrl($params = []) {
                         <tr>
                             <th>Curso</th>
                             <th>Establecimiento</th>
-                            <th>Acciones</th>
                         </tr>
                       </thead>
                       <tbody>";
@@ -136,31 +146,32 @@ function buildUrl($params = []) {
                 $encontrados = false;
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $encontrados = true;
-                    echo "<tr>
+                    // Construir URL de destino
+                    $url = "dashboard_profesor.php?vista=estudiantes&id_curso=" . $row['Id'];
+                    
+                    // Fila Clickeable
+                    echo "<tr class='clickable-row' onclick=\"window.location='$url'\">
                           <td><strong>".htmlspecialchars($row['Nombre'])."</strong></td>
                           <td>".htmlspecialchars($row['Establecimiento'])."</td>
-                          <td class='actions'>
-                            <a class='btn-action btn-view' title='Ver Estudiantes'
-                               href='dashboard_profesor.php?vista=estudiantes&id_curso=".$row['Id']."'>
-                               <i class='fa-solid fa-users'></i>
-                            </a>
-                          </td>
                           </tr>";
                 }
                 
                 if (!$encontrados) {
-                    echo "<tr><td colspan='3' style='text-align:center; padding:20px;'>No tienes cursos asignados.</td></tr>";
+                    echo "<tr><td colspan='2' style='text-align:center; padding:20px;'>No tienes cursos asignados.</td></tr>";
                 }
 
                 echo "</tbody></table></div>";
 
-                // Paginador
+                // Paginador Inteligente
                 if ($total_pags > 1) {
                     echo '<div class="pagination">';
-                    for ($i=1; $i<=$total_pags; $i++) {
-                        echo '<a href="'.buildUrl(['pag' => $i]).'" class="page-link '.($i==$pagina_actual?'active':'').'">'.$i.'</a>';
-                    }
-                    echo '</div><div class="page-info">Página '.$pagina_actual.' de '.$total_pags.'</div>';
+                    $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
+                    if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                    if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                    for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                    if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                    if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                    echo '</div><div class="page-info">Página '.$actual.' de '.$total.'</div>';
                 }
             }
 
@@ -203,7 +214,6 @@ function buildUrl($params = []) {
                         <tr>
                             <th>RUT</th>
                             <th>Nombre Completo</th>
-                            <th>Acciones</th>
                         </tr>
                       </thead>
                       <tbody>";
@@ -214,29 +224,30 @@ function buildUrl($params = []) {
                     // Concatenación segura
                     $nombreFull = $row['Nombres'] . ' ' . $row['ApellidoPaterno'] . ' ' . ($row['ApellidoMaterno'] ?? '');
                     
-                    echo "<tr>
+                    // URL destino
+                    $url = "dashboard_profesor.php?vista=mediciones&id_estudiante=" . $row['Id'];
+
+                    // Fila Clickeable
+                    echo "<tr class='clickable-row' onclick=\"window.location='$url'\">
                           <td>".htmlspecialchars($row['Rut'])."</td>
                           <td>".htmlspecialchars($nombreFull)."</td>
-                          <td class='actions'>
-                            <a class='btn-action btn-view' title='Ver Historial y Medir'
-                               href='dashboard_profesor.php?vista=mediciones&id_estudiante=".$row['Id']."'>
-                               <i class='fa-solid fa-notes-medical'></i>
-                            </a>
-                          </td>
                           </tr>";
                 }
                 if (!$encontrados) {
-                    echo "<tr><td colspan='3' style='text-align:center; padding:20px;'>No hay estudiantes en este curso.</td></tr>";
+                    echo "<tr><td colspan='2' style='text-align:center; padding:20px;'>No hay estudiantes en este curso.</td></tr>";
                 }
                 echo "</tbody></table></div>";
 
-                // Paginador
+                // Paginador Inteligente
                 if ($total_pags > 1) {
                     echo '<div class="pagination">';
-                    for ($i=1; $i<=$total_pags; $i++) {
-                        echo '<a href="'.buildUrl(['pag' => $i]).'" class="page-link '.($i==$pagina_actual?'active':'').'">'.$i.'</a>';
-                    }
-                    echo '</div><div class="page-info">Página '.$pagina_actual.' de '.$total_pags.'</div>';
+                    $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
+                    if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                    if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                    for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                    if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                    if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                    echo '</div><div class="page-info">Página '.$actual.' de '.$total.'</div>';
                 }
             }
 
@@ -246,7 +257,7 @@ function buildUrl($params = []) {
             // ===========================================================
             elseif ($vista === 'mediciones' && $id_estudiante) {
 
-                // Obtener datos del estudiante para título y botón volver
+                // Obtener datos del estudiante
                 $stmt_est = $pdo->prepare("SELECT Nombres, ApellidoPaterno, Id_Curso FROM Estudiante WHERE Id = ?");
                 $stmt_est->execute([$id_estudiante]);
                 $est = $stmt_est->fetch(PDO::FETCH_ASSOC);
@@ -274,7 +285,7 @@ function buildUrl($params = []) {
                 $total_regs = $stmt_c->fetchColumn();
                 $total_pags = ceil($total_regs / $registros_por_pagina);
 
-                // 2. Obtener Mediciones Paginadas
+                // 2. Obtener Mediciones
                 $stmt = $pdo->prepare("
                     SELECT FechaMedicion as Fecha, Peso, Altura, IMC, Diagnostico, Observaciones
                     FROM RegistroNutricional
@@ -301,13 +312,12 @@ function buildUrl($params = []) {
                 $encontrados = false;
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $encontrados = true;
-                    // Colores diagnóstico
                     $d = $row['Diagnostico'];
                     $c = '#333';
-                    if(strpos($d,'Bajo')!==false) $c='#ffc107';      // Amarillo
-                    elseif(strpos($d,'Normal')!==false) $c='#198754'; // Verde
-                    elseif(strpos($d,'Sobrepeso')!==false) $c='#fd7e14'; // Naranja
-                    elseif(strpos($d,'Obesidad')!==false) $c='#dc3545';  // Rojo
+                    if(strpos($d,'Bajo')!==false) $c='#ffc107';      
+                    elseif(strpos($d,'Normal')!==false) $c='#198754'; 
+                    elseif(strpos($d,'Sobrepeso')!==false) $c='#fd7e14'; 
+                    elseif(strpos($d,'Obesidad')!==false) $c='#dc3545';  
 
                     echo "<tr>
                             <td>" . date("d/m/Y", strtotime($row['Fecha'])) . "</td>
@@ -323,13 +333,16 @@ function buildUrl($params = []) {
                 }
                 echo "</tbody></table></div>";
 
-                // Paginador
+                // Paginador Inteligente
                 if ($total_pags > 1) {
                     echo '<div class="pagination">';
-                    for ($i=1; $i<=$total_pags; $i++) {
-                        echo '<a href="'.buildUrl(['pag' => $i]).'" class="page-link '.($i==$pagina_actual?'active':'').'">'.$i.'</a>';
-                    }
-                    echo '</div><div class="page-info">Página '.$pagina_actual.' de '.$total_pags.'</div>';
+                    $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
+                    if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                    if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                    for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                    if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                    if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                    echo '</div><div class="page-info">Página '.$actual.' de '.$total.'</div>';
                 }
             }
             ?>
@@ -337,7 +350,7 @@ function buildUrl($params = []) {
             </div>
         </section>
         <footer class="main-footer">
-                &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
+            &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
         </footer>
     </main>
 </div>

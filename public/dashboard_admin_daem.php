@@ -7,15 +7,14 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorDAEM'
     header("Location: login.php"); exit;
 }
 
-// --- CONFIGURACIÓN GLOBAL ---
-$vista = $_GET['vista'] ?? 'general'; // 'general' o 'reportes'
-$registros_por_pagina = 20; 
+// --- CONFIGURACIÓN ---
+$vista = $_GET['vista'] ?? 'general';
+$registros_por_pagina = 20;
 
 // Listas para filtros
 $colegios = $pdo->query("SELECT Id, Nombre FROM Establecimiento ORDER BY Nombre")->fetchAll(PDO::FETCH_ASSOC);
 $todos_los_cursos = $pdo->query("SELECT Id, Nombre, Id_Establecimiento FROM Curso ORDER BY Nombre")->fetchAll(PDO::FETCH_ASSOC);
 
-// Helper para mantener parámetros en la URL
 function buildUrl($params = []) {
     $currentParams = $_GET;
     $merged = array_merge($currentParams, $params);
@@ -23,7 +22,7 @@ function buildUrl($params = []) {
 }
 
 // =================================================================================
-// LÓGICA VISTA GENERAL (DASHBOARD)
+// VISTA GENERAL
 // =================================================================================
 if ($vista === 'general') {
     $pag_general = isset($_GET['pag']) ? (int)$_GET['pag'] : 1;
@@ -35,7 +34,6 @@ if ($vista === 'general') {
     $filtro_colegio = $_GET['colegio'] ?? null;
     $filtro_sexo = $_GET['sexo'] ?? null;
 
-    // WHERE Dinámico
     $cond = []; $params = [];
     if ($filtro_colegio) { $cond[] = "c.Id_Establecimiento = ?"; $params[] = $filtro_colegio; }
     if ($filtro_sexo) { $cond[] = "e.Sexo = ?"; $params[] = $filtro_sexo; }
@@ -49,7 +47,7 @@ if ($vista === 'general') {
     $stmt_kpi = $pdo->prepare($sql_kpi); $stmt_kpi->execute($params); $kpis = $stmt_kpi->fetch(PDO::FETCH_ASSOC);
     $porcentaje = ($kpis['total'] > 0) ? round(($kpis['riesgo'] / $kpis['total']) * 100, 1) : 0;
 
-    // Datos Gráficos
+    // Gráficos
     $sql_graf = "SELECT r.Diagnostico as estado, COUNT(*) as cantidad FROM RegistroNutricional r
                  JOIN Estudiante e ON r.Id_Estudiante = e.Id JOIN Curso c ON e.Id_Curso = c.Id
                  INNER JOIN (SELECT Id_Estudiante, MAX(FechaMedicion) as MaxF FROM RegistroNutricional GROUP BY Id_Estudiante) u 
@@ -65,16 +63,15 @@ if ($vista === 'general') {
         else $colores[]='#dc3545';
     }
 
-    // Tabla Alertas
+    // Alertas
     $sql_base = "FROM Alerta a JOIN RegistroNutricional r ON a.Id_RegistroNutricional = r.Id JOIN Estudiante e ON r.Id_Estudiante = e.Id JOIN Curso c ON e.Id_Curso = c.Id JOIN Establecimiento est ON c.Id_Establecimiento = est.Id";
-    
     $cond_a = []; $params_a = [];
     if ($filtro_estado !== null) { $cond_a[] = "a.Estado = ?"; $params_a[] = $filtro_estado; }
     if ($filtro_colegio) { $cond_a[] = "c.Id_Establecimiento = ?"; $params_a[] = $filtro_colegio; }
     if ($filtro_sexo) { $cond_a[] = "e.Sexo = ?"; $params_a[] = $filtro_sexo; }
     $where_a = !empty($cond_a) ? " WHERE " . implode(" AND ", $cond_a) : "";
 
-    $sql_conteo = "SELECT COUNT(*) $sql_base $where_a";
+    $sql_conteo = "SELECT COUNT(*) $sql_base $where_a"; 
     $stmt_c = $pdo->prepare($sql_conteo); $stmt_c->execute($params_a);
     $total_regs_alertas = $stmt_c->fetchColumn();
     $total_pags_alertas = ceil($total_regs_alertas / $registros_por_pagina);
@@ -87,23 +84,19 @@ if ($vista === 'general') {
 }
 
 // =================================================================================
-// LÓGICA VISTA REPORTES (CON VALIDACIÓN DE FECHAS)
+// VISTA REPORTES
 // =================================================================================
 if ($vista === 'reportes') {
     $pag_rep = isset($_GET['pag_rep']) ? (int)$_GET['pag_rep'] : 1;
     if ($pag_rep < 1) $pag_rep = 1;
     $offset_rep = ($pag_rep - 1) * $registros_por_pagina;
 
-    // Filtros
     $rep_colegio = $_GET['rep_colegio'] ?? '';
     $rep_curso = $_GET['rep_curso'] ?? '';
     $rep_sexo = $_GET['rep_sexo'] ?? '';
-    
-    // Validación: Si viene vacío, usar defaults
     $fecha_ini = !empty($_GET['fecha_ini']) ? $_GET['fecha_ini'] : date('Y-01-01');
     $fecha_fin = !empty($_GET['fecha_fin']) ? $_GET['fecha_fin'] : date('Y-m-d');
 
-    // Query Base
     $cond_rep = ["r.FechaMedicion BETWEEN ? AND ?"];
     $params_rep = [$fecha_ini, $fecha_fin];
 
@@ -113,13 +106,11 @@ if ($vista === 'reportes') {
 
     $where_rep = "WHERE " . implode(" AND ", $cond_rep);
 
-    // Contar Total
     $sql_count_rep = "SELECT COUNT(*) FROM RegistroNutricional r JOIN Estudiante e ON r.Id_Estudiante = e.Id JOIN Curso c ON e.Id_Curso = c.Id $where_rep";
     $stmt_count_rep = $pdo->prepare($sql_count_rep); $stmt_count_rep->execute($params_rep);
     $total_registros_rep = $stmt_count_rep->fetchColumn();
     $total_pags_rep = ceil($total_registros_rep / $registros_por_pagina);
 
-    // Obtener Datos
     $sql_reporte = "
         SELECT e.Rut, CONCAT_WS(' ', e.Nombres, e.ApellidoPaterno, e.ApellidoMaterno) as Estudiante, e.Sexo,
             TIMESTAMPDIFF(YEAR, e.FechaNacimiento, CURDATE()) as Edad, c.Nombre as Curso, est.Nombre as Colegio,
@@ -146,12 +137,10 @@ if ($vista === 'reportes') {
         .kpi-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #0d6efd; }
         .kpi-card .value { font-size: 2rem; font-weight: bold; color: #333; }
         .block-section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 30px; }
-        
         .charts-row { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
         .chart-card { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; }
         .chart-wrapper { position: relative; width: 100%; max-width: 350px; height: 300px; }
         .chart-wrapper-bar { position: relative; width: 100%; height: 300px; }
-
         .top-filters { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 25px; flex-wrap: wrap; }
         .page-link { padding: 8px 14px; border: 1px solid #ddd; background: white; text-decoration: none; border-radius: 4px; color: #333; font-weight: 500; transition: all 0.2s; }
@@ -169,13 +158,10 @@ if ($vista === 'reportes') {
             .main-content { margin: 0; padding: 0; width: 100%; }
             .content-container { box-shadow: none; border: none; padding: 0; }
             .block-section { box-shadow: none; border: none; padding: 0; margin: 0; }
-            
-            /* Encabezado PDF sin manzana */
             .report-header-print { display: block !important; margin-bottom: 20px; border-bottom: 2px solid #4361ee; padding-bottom: 10px; }
             .rh-logo { font-size: 24px; font-weight: bold; color: #4361ee; float: left; }
             .rh-info { text-align: right; font-size: 12px; color: #666; float: right; margin-top: 5px; }
             .rh-clear { clear: both; }
-
             .table-responsive { overflow: visible; }
             table { width: 100%; border-collapse: collapse; font-size: 11px; }
             th { background-color: #f3f4f6 !important; color: #111 !important; font-weight: 700; padding: 6px 4px; border-bottom: 2px solid #ccc; text-transform: uppercase; }
@@ -257,12 +243,19 @@ if ($vista === 'reportes') {
                                     </tbody>
                                 </table>
                             </div>
+                            
                             <?php if ($total_pags_alertas > 1): ?>
                             <div class="pagination">
-                                <?php for($i=1; $i<=$total_pags_alertas; $i++): ?>
-                                    <a href="<?php echo buildUrl(['pag' => $i]); ?>" class="page-link <?php echo $i==$pag_general?'active':''; ?>"><?php echo $i; ?></a>
-                                <?php endfor; ?>
+                                <?php 
+                                $rango = 2; $actual = $pag_general; $total = $total_pags_alertas; $param = 'pag';
+                                if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                                if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                                for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                                if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                                if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                                ?>
                             </div>
+                            <div style="text-align:center; margin-top:10px; color:#888; font-size:0.8rem;" class="actions-bar">Página <?php echo $actual; ?> de <?php echo $total; ?></div>
                             <?php endif; ?>
                         </div>
 
@@ -272,34 +265,27 @@ if ($vista === 'reportes') {
                         <div class="block-section report-form-container">
                             <form method="GET" class="report-filters" id="formReportes">
                                 <input type="hidden" name="vista" value="reportes">
-                                
                                 <div class="form-group">
                                     <label>Colegio:</label>
                                     <select name="rep_colegio" id="rep_colegio" onchange="this.form.submit()">
                                         <option value="">Todos los Colegios</option>
-                                        <?php foreach($colegios as $c): ?>
-                                            <option value="<?php echo $c['Id']; ?>" <?php echo $rep_colegio == $c['Id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['Nombre']); ?></option>
-                                        <?php endforeach; ?>
+                                        <?php foreach($colegios as $c): ?><option value="<?php echo $c['Id']; ?>" <?php echo $rep_colegio == $c['Id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['Nombre']); ?></option><?php endforeach; ?>
                                     </select>
                                 </div>
-
                                 <div class="form-group">
                                     <label>Curso:</label>
                                     <select name="rep_curso" id="rep_curso" onchange="this.form.submit()">
                                         <option value="">Todos los Cursos</option>
-                                        </select>
+                                    </select>
                                 </div>
-
                                 <div class="form-group">
                                     <label>Desde:</label>
                                     <input type="date" name="fecha_ini" value="<?php echo $fecha_ini; ?>" onchange="actualizarReporteConDebounce()">
                                 </div>
-
                                 <div class="form-group">
                                     <label>Hasta:</label>
                                     <input type="date" name="fecha_fin" value="<?php echo $fecha_fin; ?>" onchange="actualizarReporteConDebounce()">
                                 </div>
-
                                 <div class="form-group">
                                     <label>Sexo:</label>
                                     <select name="rep_sexo" onchange="this.form.submit()">
@@ -315,19 +301,9 @@ if ($vista === 'reportes') {
                             <div class="actions-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                                 <h3>Resultados (<?php echo $total_registros_rep; ?> registros)</h3>
                                 <div style="display:flex; gap:10px;">
-                                    <button onclick="window.print()" class="btn-create" style="background:#6c757d;"><i class="fa-solid fa-print"></i> Imprimir PDF</button>
+                                    <a href="AdminDAEM/imprimir_reporte.php?<?php echo http_build_query($_GET); ?>" target="_blank" class="btn-create" style="background:#6c757d; text-decoration:none;"><i class="fa-solid fa-print"></i> Imprimir PDF Completo</a>
                                     <a href="AdminDAEM/exportar_excel.php?<?php echo http_build_query($_GET); ?>" target="_blank" class="btn-create" style="background:#198754;"><i class="fa-solid fa-file-excel"></i> Exportar Excel</a>
                                 </div>
-                            </div>
-
-                            <div class="report-header-print">
-                                <div class="rh-logo">NutriData Reporte</div>
-                                <div class="rh-info">
-                                    Generado: <?php echo date("d/m/Y H:i"); ?><br>
-                                    Filtro: <?php echo $rep_colegio ? 'Colegio Seleccionado' : 'Global'; ?><br>
-                                    Rango: <?php echo date("d/m/Y", strtotime($fecha_ini)); ?> al <?php echo date("d/m/Y", strtotime($fecha_fin)); ?>
-                                </div>
-                                <div class="rh-clear"></div>
                             </div>
 
                             <div class="table-responsive">
@@ -370,11 +346,16 @@ if ($vista === 'reportes') {
 
                             <?php if ($total_pags_rep > 1): ?>
                             <div class="pagination">
-                                <?php for($i=1; $i<=$total_pags_rep; $i++): ?>
-                                    <a href="<?php echo buildUrl(['pag_rep' => $i]); ?>" class="page-link <?php echo $i==$pag_rep?'active':''; ?>"><?php echo $i; ?></a>
-                                <?php endfor; ?>
+                                <?php 
+                                $rango = 2; $actual = $pag_rep; $total = $total_pags_rep; $param = 'pag_rep';
+                                if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                                if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                                for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                                if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                                if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                                ?>
                             </div>
-                            <div style="text-align:center; margin-top:10px; color:#888; font-size:0.8rem;" class="actions-bar">Página <?php echo $pag_rep; ?> de <?php echo $total_pags_rep; ?></div>
+                            <div style="text-align:center; margin-top:10px; color:#888; font-size:0.8rem;" class="actions-bar">Página <?php echo $actual; ?> de <?php echo $total; ?></div>
                             <?php endif; ?>
                         </div>
                     <?php endif; ?>
@@ -399,19 +380,13 @@ if ($vista === 'reportes') {
 
     <?php if ($vista === 'reportes'): ?>
     <script>
-        // 1. Debounce para Fechas (Evita recarga inmediata)
         let timeout;
         function actualizarReporteConDebounce() {
             clearTimeout(timeout);
-            timeout = setTimeout(function() {
-                document.getElementById('formReportes').submit();
-            }, 1000); // Espera 1 segundo después de cambiar la fecha
+            timeout = setTimeout(function() { document.getElementById('formReportes').submit(); }, 1000);
         }
-
-        // 2. Filtro de Cursos Dinámico
         const todosLosCursos = <?php echo json_encode($todos_los_cursos); ?>;
         const cursoSeleccionado = "<?php echo $rep_curso; ?>";
-
         function filtrarCursosJS() {
             const colegioId = document.getElementById('rep_colegio').value;
             const selectCurso = document.getElementById('rep_curso');
