@@ -143,6 +143,9 @@ $comunas = $pdo->query("SELECT Id, Comuna, Id_Region FROM Comuna ORDER BY Comuna
                     </form>
                 </div>
             </section>
+            <footer class="main-footer">
+                &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
+            </footer>
         </main>
     </div>
 

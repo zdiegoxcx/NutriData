@@ -164,6 +164,9 @@ if (!$alerta) die("Alerta no encontrada.");
 
                 </div>
             </section>
+            <footer class="main-footer">
+                &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
+            </footer>
         </main>
     </div>
 </body>

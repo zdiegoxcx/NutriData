@@ -588,3 +588,20 @@ body.login-page {
     .login-header-mobile { display: block; }
     .login-header-mobile h1 { color: var(--primary-color); font-size: 2.5rem; font-weight: 800; }
 }
+
+/* =========================================
+   FOOTER GLOBAL
+   ========================================= */
+.main-footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: auto; /* Empuja el footer al fondo si hay poco contenido */
+    border-top: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    background-color: #fff;
+}
+
+.main-footer strong {
+    color: var(--primary-color);
+}

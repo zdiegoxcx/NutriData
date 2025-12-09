@@ -192,6 +192,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </form>
                 </div>
             </section>
+            <footer class="main-footer">
+                &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
+            </footer>
         </main>
     </div>
     <script src="../../js/formato_rut.js"></script>

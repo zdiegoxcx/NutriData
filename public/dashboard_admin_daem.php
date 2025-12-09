@@ -381,6 +381,9 @@ if ($vista === 'reportes') {
 
                 </div>
             </section>
+            <footer class="main-footer">
+                &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
+            </footer>
         </main>
     </div>
 
