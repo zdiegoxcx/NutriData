@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorDAEM'
     die("Acceso denegado");
 }
 
-// Recibir Filtros (Mismos nombres que en el formulario)
+// Recibir Filtros
 $rep_colegio = $_GET['rep_colegio'] ?? '';
 $rep_curso = $_GET['rep_curso'] ?? '';
 $rep_sexo = $_GET['rep_sexo'] ?? '';
@@ -18,8 +18,23 @@ $fecha_fin = $_GET['fecha_fin'] ?? date('Y-m-d');
 $cond_rep = ["r.FechaMedicion BETWEEN ? AND ?"];
 $params_rep = [$fecha_ini, $fecha_fin];
 
-if ($rep_colegio) { $cond_rep[] = "c.Id_Establecimiento = ?"; $params_rep[] = $rep_colegio; }
-if ($rep_curso) { $cond_rep[] = "c.Id = ?"; $params_rep[] = $rep_curso; }
+if ($rep_colegio) { 
+    $cond_rep[] = "c.Id_Establecimiento = ?"; 
+    $params_rep[] = $rep_colegio; 
+}
+
+// --- FILTRO INTELIGENTE DE CURSO ---
+if ($rep_curso) { 
+    if (is_numeric($rep_curso)) {
+        $cond_rep[] = "c.Id = ?"; 
+        $params_rep[] = $rep_curso; 
+    } else {
+        $cond_rep[] = "c.Nombre LIKE ?"; 
+        $params_rep[] = $rep_curso . "%"; 
+    }
+}
+// -----------------------------------
+
 if ($rep_sexo) { $cond_rep[] = "e.Sexo = ?"; $params_rep[] = $rep_sexo; }
 
 $where_rep = "WHERE " . implode(" AND ", $cond_rep);
@@ -67,7 +82,6 @@ echo "<tr>
       </tr>";
 
 foreach ($filas as $f) {
-    // Colores condicionales para diagnóstico en Excel
     $color = '#000000';
     if (strpos($f['Diagnostico'], 'Obesidad') !== false) $color = '#dc3545';
     elseif (strpos($f['Diagnostico'], 'Bajo') !== false) $color = '#ffc107';

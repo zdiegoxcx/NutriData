@@ -14,9 +14,6 @@ session_start();
 
     <div class="login-banner">
         <div class="banner-content">
-            <div style="font-size: 4rem; margin-bottom: 20px;">
-                <i class="fa-solid fa-apple-whole"></i>
-            </div>
             <h1>NutriData</h1>
             <p>Sistema integral para el monitoreo y gestión nutricional escolar de la Región del Biobío.</p>
         </div>

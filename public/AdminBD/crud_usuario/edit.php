@@ -1,9 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../../src/config/db.php';
-// INCLUIR ARCHIVO DE VALIDACIONES
 require_once __DIR__ . '/../../../src/config/validaciones.php';
-
 $pdo = getConnection();
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') {
@@ -14,7 +12,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorBD') 
 $id_usuario = $_GET['id'] ?? null;
 if (!$id_usuario) { header("Location: ../../dashboard_admin_bd.php?vista=usuarios"); exit; }
 
-// Obtener datos
+// Obtener datos del usuario
 $stmt = $pdo->prepare("SELECT * FROM Usuario WHERE Id = ?");
 $stmt->execute([$id_usuario]);
 $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -41,36 +39,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nueva_contrasena = $_POST['contrasena'];
     $rol_id = $_POST['rol_id'];
 
-    // --- NUEVAS VALIDACIONES ---
-    if (!validarRut($rut)) {
-        $errores[] = "El RUT ingresado no es válido (formato o dígito verificador incorrecto).";
-    }
-    if (!validarSoloLetras($nombre)) {
-        $errores[] = "El nombre solo puede contener letras y espacios.";
-    }
-    if (!validarSoloLetras($apellido)) {
-        $errores[] = "El apellido solo puede contener letras y espacios.";
-    }
-    // ---------------------------
-
-    if (empty($rut) || empty($nombre) || empty($rol_id)) { 
-        $errores[] = "Campos obligatorios faltantes."; 
-    } 
+    if (!validarRut($rut)) $errores[] = "El RUT ingresado no es válido.";
+    if (!validarSoloLetras($nombre)) $errores[] = "El nombre solo puede contener letras.";
+    if (!validarSoloLetras($apellido)) $errores[] = "El apellido solo puede contener letras.";
+    if (empty($rut) || empty($nombre) || empty($rol_id)) $errores[] = "Campos obligatorios faltantes."; 
 
     if (empty($errores)) {
         try {
             if (!empty($nueva_contrasena)) {
-                // ENCRIPTAR LA NUEVA CONTRASEÑA
                 $pass_hashed = password_hash($nueva_contrasena, PASSWORD_DEFAULT);
-
                 $sql = "UPDATE Usuario SET Id_Rol=?, Rut=?, Nombre=?, Apellido=?, Email=?, Telefono=?, Contraseña=? WHERE Id=?";
-                // Usamos $pass_hashed
                 $pdo->prepare($sql)->execute([$rol_id, $rut, $nombre, $apellido, $email, $telefono, $pass_hashed, $id_usuario]);
             } else {
                 $sql = "UPDATE Usuario SET Id_Rol=?, Rut=?, Nombre=?, Apellido=?, Email=?, Telefono=? WHERE Id=?";
                 $pdo->prepare($sql)->execute([$rol_id, $rut, $nombre, $apellido, $email, $telefono, $id_usuario]);
             }
-            $_SESSION['success_message'] = "Usuario actualizado.";
+            $_SESSION['success_message'] = "Usuario actualizado correctamente.";
             header("Location: ../../dashboard_admin_bd.php?vista=usuarios");
             exit;
         } catch (PDOException $e) {
@@ -78,6 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 } else {
+    // Pre-llenar datos para la vista GET
     $rut = $usuario['Rut']; $nombre = $usuario['Nombre']; $apellido = $usuario['Apellido'];
     $email = $usuario['Email']; $telefono = $usuario['Telefono']; $rol_id = $usuario['Id_Rol'];
 }
@@ -87,99 +72,96 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Editar Usuario</title>
-    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/styles.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="dashboard-wrapper">
-        <aside class="sidebar">
-            <div class="sidebar-header"><h2>DAEM NutriMonitor</h2></div>
-            <nav class="sidebar-nav">
-                 <a href="../../dashboard_admin_bd.php?vista=usuarios" class="nav-item active"><i class="fa-solid fa-arrow-left"></i> Volver</a>
-            </nav>
-        </aside>
+    <header class="main-header">
+        <div class="header-left">
+            <a href="../../dashboard_admin_bd.php?vista=usuarios" class="btn-header-back">
+                <i class="fa-solid fa-arrow-left"></i> Volver
+            </a>
+            <div class="brand-logo" style="margin-left:10px; font-size:1.1rem; color:#333;">Admin BD</div>
+        </div>
+        <div class="header-user-section">
+            <div class="user-info">
+                <span class="user-name"><?php echo htmlspecialchars($_SESSION['user_nombre'] ?? 'Usuario'); ?></span>
+            </div>
+            <a href="../../logout.php" class="btn-logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </header>
 
-        <main class="main-content">
-            <header class="header">
-                <div class="header-user"><?php echo htmlspecialchars($_SESSION['user_nombre'] ?? 'Usuario'); ?></div>
-            </header>
+    <main class="main-content">
+        <div class="content-container" style="max-width: 800px; margin: 0 auto;">
+            <h1 style="border-bottom:1px solid #eee; padding-bottom:10px; margin-bottom:20px;">
+                <i class="fa-solid fa-user-pen"></i> Editar Usuario
+            </h1>
 
-            <section class="content-body">
-                <div class="content-container">
-                    <?php if ($es_activo): ?>
-                        <h1><i class="fa-solid fa-user-pen"></i> Editar Usuario</h1>
-                    <?php else: ?>
-                        <h1 style="color: #6c757d;"><i class="fa-solid fa-user-lock"></i> Usuario Inactivo</h1>
-                    <?php endif; ?>
+            <?php if (!$es_activo): ?>
+                <div class="mensaje error"><i class="fa-solid fa-user-lock"></i> Usuario Inactivo (Solo lectura).</div>
+            <?php endif; ?>
 
-                    <?php if ($errores): ?><div class="mensaje error"><?php echo implode('<br>', $errores); ?></div><?php endif; ?>
+            <?php if ($errores): ?><div class="mensaje error"><?php echo implode('<br>', $errores); ?></div><?php endif; ?>
 
-                    <form method="POST" class="crud-form">
-                        <div style="display:flex; gap:20px;">
-                            <div class="form-group" style="flex:1;"><label>RUT:</label>
-                                <input type="text" id="rut" name="rut" 
-                                       value="<?php echo htmlspecialchars($rut); ?>" 
-                                       placeholder="12.345.678-9" 
-                                       required 
-                                       maxlength="12"
-                                       oninput="darFormatoRut(this)">
-                            </div>
-                            <div class="form-group" style="flex:1;">
-                                <label>Rol:</label>
-                                <select name="rol_id" <?php echo $readonly_attr; ?>>
-                                    <?php foreach ($roles as $r): ?>
-                                        <option value="<?php echo $r['Id']; ?>" <?php echo ($r['Id'] == $rol_id) ? 'selected' : ''; ?>><?php echo htmlspecialchars($r['Nombre']); ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:20px;">
-                            <div class="form-group" style="flex:1;"><label>Nombre:</label>
-                                <input type="text" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" 
-                                       <?php echo $readonly_attr; ?> maxlength="50">
-                            </div>
-                            <div class="form-group" style="flex:1;"><label>Apellido:</label>
-                                <input type="text" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" 
-                                       <?php echo $readonly_attr; ?> maxlength="50">
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:20px;">
-                            <div class="form-group" style="flex:1;"><label>Email:</label>
-                                <input type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" 
-                                       <?php echo $readonly_attr; ?> maxlength="75">
-                            </div>
-                            <div class="form-group" style="flex:1;"><label>Teléfono:</label>
-                                <input type="text" name="telefono" value="<?php echo htmlspecialchars($telefono); ?>" 
-                                       <?php echo $readonly_attr; ?> maxlength="30">
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:20px;">
-                            <div class="form-group" style="flex:1;"><label>Contraseña:</label><input type="password" name="contrasena" placeholder="Dejar en blanco para mantener" <?php echo $readonly_attr; ?>></div>
-                            <div class="form-group" style="flex:1;">
-                                <label>Estado:</label>
-                                <?php if ($es_activo): ?>
-                                    <div style="padding:10px; background:#d1e7dd; color:#0f5132; border-radius:4px;">Activo</div>
-                                <?php else: ?>
-                                    <div style="padding:10px; background:#f8d7da; color:#842029; border-radius:4px;">
-                                        Inactivo (Eliminado el <?php echo $usuario['FechaEliminacion']; ?>)
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-
-                        <?php if ($es_activo): ?>
-                            <div class="form-actions" style="margin-top:30px;">
-                                <button type="submit" class="btn-create" style="background-color:#ffc107; color:#000;"><i class="fa-solid fa-save"></i> Actualizar</button>
-                            </div>
-                        <?php endif; ?>
-                    </form>
+            <form method="POST" class="crud-form">
+                <div style="display:flex; gap:20px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>RUT:</label>
+                        <input type="text" name="rut" value="<?php echo htmlspecialchars($rut); ?>" 
+                               required maxlength="12" oninput="darFormatoRut(this)" <?php echo $readonly_attr; ?>>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Rol:</label>
+                        <select name="rol_id" <?php echo $readonly_attr; ?>>
+                            <?php foreach ($roles as $r): ?>
+                                <option value="<?php echo $r['Id']; ?>" <?php echo ($r['Id'] == $rol_id) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($r['Nombre']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
-            </section>
-            <footer class="main-footer">
-                &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
-            </footer>
-        </main>
-    </div>
+
+                <div style="display:flex; gap:20px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Nombre:</label>
+                        <input type="text" name="nombre" value="<?php echo htmlspecialchars($nombre); ?>" required maxlength="50" <?php echo $readonly_attr; ?>>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Apellido:</label>
+                        <input type="text" name="apellido" value="<?php echo htmlspecialchars($apellido); ?>" required maxlength="50" <?php echo $readonly_attr; ?>>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:20px;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Email:</label>
+                        <input type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" maxlength="75" <?php echo $readonly_attr; ?>>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Teléfono:</label>
+                        <input type="text" name="telefono" value="<?php echo htmlspecialchars($telefono); ?>" maxlength="30" <?php echo $readonly_attr; ?>>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Contraseña:</label>
+                    <input type="password" name="contrasena" placeholder="Dejar en blanco para mantener la actual" <?php echo $readonly_attr; ?>>
+                </div>
+
+                <?php if ($es_activo): ?>
+                    <div class="form-actions" style="margin-top:30px;">
+                        <button type="submit" class="btn-create" style="background-color:#ffc107; color:#000; width:100%;">
+                            <i class="fa-solid fa-save"></i> Actualizar Datos
+                        </button>
+                    </div>
+                <?php endif; ?>
+            </form>
+        </div>
+        <footer class="main-footer">
+            &copy; <?php echo date("Y"); ?> NutriData.
+        </footer>
+    </main>
     <script src="../../js/formato_rut.js"></script>
 </body>
 </html>

@@ -11,8 +11,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_rol'] != 'administradorDAEM'
 $vista = $_GET['vista'] ?? 'general';
 $registros_por_pagina = 20;
 
-// Listas para filtros
+// Listas para filtros (JSON para JS)
 $colegios = $pdo->query("SELECT Id, Nombre FROM Establecimiento ORDER BY Nombre")->fetchAll(PDO::FETCH_ASSOC);
+// Traemos Nombre y ID para el JS
 $todos_los_cursos = $pdo->query("SELECT Id, Nombre, Id_Establecimiento FROM Curso ORDER BY Nombre")->fetchAll(PDO::FETCH_ASSOC);
 
 function buildUrl($params = []) {
@@ -22,7 +23,7 @@ function buildUrl($params = []) {
 }
 
 // =================================================================================
-// VISTA GENERAL
+// VISTA GENERAL (KPIs y Gráficos)
 // =================================================================================
 if ($vista === 'general') {
     $pag_general = isset($_GET['pag']) ? (int)$_GET['pag'] : 1;
@@ -84,7 +85,7 @@ if ($vista === 'general') {
 }
 
 // =================================================================================
-// VISTA REPORTES
+// VISTA REPORTES (Lógica Modificada para Filtro Híbrido)
 // =================================================================================
 if ($vista === 'reportes') {
     $pag_rep = isset($_GET['pag_rep']) ? (int)$_GET['pag_rep'] : 1;
@@ -92,7 +93,7 @@ if ($vista === 'reportes') {
     $offset_rep = ($pag_rep - 1) * $registros_por_pagina;
 
     $rep_colegio = $_GET['rep_colegio'] ?? '';
-    $rep_curso = $_GET['rep_curso'] ?? '';
+    $rep_curso = $_GET['rep_curso'] ?? ''; // Puede ser ID (numérico) o Nombre (texto)
     $rep_sexo = $_GET['rep_sexo'] ?? '';
     $fecha_ini = !empty($_GET['fecha_ini']) ? $_GET['fecha_ini'] : date('Y-01-01');
     $fecha_fin = !empty($_GET['fecha_fin']) ? $_GET['fecha_fin'] : date('Y-m-d');
@@ -100,8 +101,26 @@ if ($vista === 'reportes') {
     $cond_rep = ["r.FechaMedicion BETWEEN ? AND ?"];
     $params_rep = [$fecha_ini, $fecha_fin];
 
-    if ($rep_colegio) { $cond_rep[] = "c.Id_Establecimiento = ?"; $params_rep[] = $rep_colegio; }
-    if ($rep_curso) { $cond_rep[] = "c.Id = ?"; $params_rep[] = $rep_curso; }
+    if ($rep_colegio) { 
+        $cond_rep[] = "c.Id_Establecimiento = ?"; 
+        $params_rep[] = $rep_colegio; 
+    }
+    
+    // --- FILTRO INTELIGENTE ---
+    if ($rep_curso) { 
+        if (is_numeric($rep_curso)) {
+            // ID específico (Cuando se ha seleccionado un colegio)
+            $cond_rep[] = "c.Id = ?"; 
+            $params_rep[] = $rep_curso;
+        } else {
+            // Nombre de Nivel (Texto) -> Buscamos coincidencias con LIKE
+            // Esto encontrará "1° Básico A", "1° Básico B", "1° Básico C"
+            $cond_rep[] = "c.Nombre LIKE ?"; 
+            $params_rep[] = $rep_curso . "%"; 
+        }
+    }
+    // -------------------------
+
     if ($rep_sexo) { $cond_rep[] = "e.Sexo = ?"; $params_rep[] = $rep_sexo; }
 
     $where_rep = "WHERE " . implode(" AND ", $cond_rep);
@@ -128,7 +147,8 @@ if ($vista === 'reportes') {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard DAEM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard DAEM - NutriData</title>
     <link rel="stylesheet" href="css/styles.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -136,272 +156,342 @@ if ($vista === 'reportes') {
         .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
         .kpi-card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid #0d6efd; }
         .kpi-card .value { font-size: 2rem; font-weight: bold; color: #333; }
-        .block-section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .block-section { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid var(--border-color); }
         .charts-row { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
-        .chart-card { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; }
+        .chart-card { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; border: 1px solid var(--border-color); }
         .chart-wrapper { position: relative; width: 100%; max-width: 350px; height: 300px; }
         .chart-wrapper-bar { position: relative; width: 100%; height: 300px; }
-        .top-filters { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .top-filters { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color); }
         .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 25px; flex-wrap: wrap; }
         .page-link { padding: 8px 14px; border: 1px solid #ddd; background: white; text-decoration: none; border-radius: 4px; color: #333; font-weight: 500; transition: all 0.2s; }
         .page-link:hover { background-color: #f8f9fa; }
-        .page-link.active { background: #0d6efd; color: white; border-color: #0d6efd; }
+        .page-link.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
         .filter-tabs a { margin-right: 15px; text-decoration: none; padding-bottom: 5px; border-bottom: 2px solid transparent; color: #666; font-weight: 500; }
-        .filter-tabs a.active { color: #0d6efd; border-bottom-color: #0d6efd; }
+        .filter-tabs a.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
         .report-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end; }
-        .report-header-print { display: none; }
-
-        @media print {
-            @page { size: landscape; margin: 10mm; }
-            body { font-family: 'Segoe UI', sans-serif; background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            .sidebar, .header, .top-filters, .report-form-container, .actions-bar, .pagination, .btn-create, .nav-tabs { display: none !important; }
-            .main-content { margin: 0; padding: 0; width: 100%; }
-            .content-container { box-shadow: none; border: none; padding: 0; }
-            .block-section { box-shadow: none; border: none; padding: 0; margin: 0; }
-            .report-header-print { display: block !important; margin-bottom: 20px; border-bottom: 2px solid #4361ee; padding-bottom: 10px; }
-            .rh-logo { font-size: 24px; font-weight: bold; color: #4361ee; float: left; }
-            .rh-info { text-align: right; font-size: 12px; color: #666; float: right; margin-top: 5px; }
-            .rh-clear { clear: both; }
-            .table-responsive { overflow: visible; }
-            table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            th { background-color: #f3f4f6 !important; color: #111 !important; font-weight: 700; padding: 6px 4px; border-bottom: 2px solid #ccc; text-transform: uppercase; }
-            td { padding: 4px; border-bottom: 1px solid #eee; color: #333; }
-            tr:nth-child(even) { background-color: #f9f9f9 !important; }
-            .text-danger { color: #dc3545 !important; font-weight: bold; }
-            .text-warning { color: #ffc107 !important; font-weight: bold; }
-            .text-orange { color: #fd7e14 !important; font-weight: bold; }
-            .text-success { color: #198754 !important; font-weight: bold; }
-        }
     </style>
 </head>
 <body>
-    <div class="dashboard-wrapper">
-        <aside class="sidebar">
-            <div class="sidebar-header"><h2>DAEM NutriMonitor</h2></div>
-            <nav class="sidebar-nav">
-                <a href="dashboard_admin_daem.php?vista=general" class="nav-item <?php echo $vista=='general'?'active':''; ?>"><i class="fa-solid fa-chart-pie"></i> General</a>
-                <a href="dashboard_admin_daem.php?vista=reportes" class="nav-item <?php echo $vista=='reportes'?'active':''; ?>"><i class="fa-solid fa-file-contract"></i> Generar Reportes</a>
-            </nav>
-        </aside>
-        <main class="main-content">
-            <header class="header"><div class="header-user"><?php echo htmlspecialchars($_SESSION['user_nombre']); ?></div><a href="logout.php" class="btn-logout">Salir</a></header>
-            <section class="content-body">
-                <div class="content-container" style="background:transparent; box-shadow:none; padding:0;">
-                    
-                    <?php if ($vista === 'general'): ?>
-                        <h1><i class="fa-solid fa-chart-line"></i> Monitor Nutricional</h1>
-                        <div class="top-filters">
-                            <i class="fa-solid fa-filter" style="color:#666;"></i>
-                            <form style="display:flex; gap:10px; flex-grow:1;" method="GET">
-                                <input type="hidden" name="vista" value="general">
-                                <?php if(isset($_GET['ver'])): ?><input type="hidden" name="ver" value="<?php echo htmlspecialchars($_GET['ver']); ?>"><?php endif; ?>
-                                <select name="colegio" onchange="this.form.submit()" style="padding:8px; border:1px solid #ddd; border-radius:4px;">
-                                    <option value="">🏢 Todos los Colegios</option>
-                                    <?php foreach($colegios as $c): ?><option value="<?php echo $c['Id']; ?>" <?php echo $filtro_colegio == $c['Id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['Nombre']); ?></option><?php endforeach; ?>
-                                </select>
-                                <select name="sexo" onchange="this.form.submit()" style="padding:8px; border:1px solid #ddd; border-radius:4px;">
-                                    <option value="">🚻 Todos los Géneros</option>
-                                    <option value="M" <?php echo $filtro_sexo == 'M' ? 'selected' : ''; ?>>Hombres</option>
-                                    <option value="F" <?php echo $filtro_sexo == 'F' ? 'selected' : ''; ?>>Mujeres</option>
-                                </select>
-                            </form>
-                        </div>
-                        <div class="kpi-grid">
-                            <div class="kpi-card"><h3>Total Alumnos</h3><div class="value"><?php echo $kpis['total']; ?></div></div>
-                            <div class="kpi-card" style="border-left-color:#198754;"><h3>Promedio IMC</h3><div class="value"><?php echo number_format($kpis['prom_imc'],1); ?></div></div>
-                            <div class="kpi-card" style="border-left-color:#dc3545;"><h3>Riesgo (Obes/Bajo)</h3><div class="value"><?php echo $porcentaje; ?>%</div></div>
-                        </div>
-                        <div class="charts-row">
-                            <div class="chart-card"><h3 style="margin-bottom:15px; color:#444;">Distribución (Porcentaje)</h3><div class="chart-wrapper"><canvas id="grafico1"></canvas></div></div>
-                            <div class="chart-card"><h3 style="margin-bottom:15px; color:#444;">Distribución (Cantidad)</h3><div class="chart-wrapper-bar"><canvas id="grafico2"></canvas></div></div>
-                        </div>
-                        <div class="block-section">
-                            <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom: 10px;">
-                                <h3><i class="fa-solid fa-bell" style="color: #fd7e14;"></i> Gestión de Alertas</h3>
-                                <div class="filter-tabs">
-                                    <a href="<?php echo buildUrl(['ver' => 'pendientes', 'pag' => 1]); ?>" class="<?php echo $filtro_estado === 1 ? 'active' : ''; ?>">Pendientes</a>
-                                    <a href="<?php echo buildUrl(['ver' => 'todos', 'pag' => 1]); ?>" class="<?php echo $filtro_estado === null ? 'active' : ''; ?>">Historial Completo</a>
-                                </div>
-                            </div>
-                            <div class="table-responsive">
-                                <table style="width: 100%;">
-                                    <thead><tr><th>Estado</th><th>Alumno</th><th>RUT</th><th>Colegio</th><th>IMC</th><th>Diag.</th><th>Fecha</th><th>Acción</th></tr></thead>
-                                    <tbody>
-                                        <?php while($row = $stmt_alertas->fetch(PDO::FETCH_ASSOC)): ?>
-                                        <tr>
-                                            <td><?php echo $row['Estado']==1 ? '<span class="status-inactive">Pendiente</span>' : '<span class="status-active">Atendida</span>'; ?></td>
-                                            <td><strong><?php echo htmlspecialchars($row['Estudiante']); ?></strong></td>
-                                            <td><?php echo htmlspecialchars($row['Rut']); ?></td>
-                                            <td><small><?php echo htmlspecialchars($row['Establecimiento']); ?></small></td>
-                                            <td><b><?php echo $row['IMC']; ?></b></td>
-                                            <td><?php $colorD='#333'; $d=$row['Diagnostico']; if(strpos($d,'Bajo')!==false)$colorD='#ffc107'; elseif(strpos($d,'Normal')!==false)$colorD='#198754'; elseif(strpos($d,'Sobrepeso')!==false)$colorD='#fd7e14'; elseif(strpos($d,'Obesidad')!==false)$colorD='#dc3545'; echo "<span style='color:$colorD; font-weight:bold;'>$d</span>"; ?></td>
-                                            <td><?php echo date("d/m/Y", strtotime($row['FechaMedicion'])); ?></td>
-                                            <td class="actions"><a href="AdminDAEM/gestionar_alerta.php?id=<?php echo $row['IdAlerta']; ?>" class="btn-action btn-edit"><i class="fa-solid fa-file-pen"></i></a></td>
-                                        </tr>
-                                        <?php endwhile; ?>
-                                        <?php if($stmt_alertas->rowCount() == 0): ?><tr><td colspan="8" style="text-align:center; padding:30px;">No hay alertas.</td></tr><?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <?php if ($total_pags_alertas > 1): ?>
-                            <div class="pagination">
-                                <?php 
-                                $rango = 2; $actual = $pag_general; $total = $total_pags_alertas; $param = 'pag';
-                                if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
-                                if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
-                                for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
-                                if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
-                                if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
-                                ?>
-                            </div>
-                            <div style="text-align:center; margin-top:10px; color:#888; font-size:0.8rem;" class="actions-bar">Página <?php echo $actual; ?> de <?php echo $total; ?></div>
-                            <?php endif; ?>
-                        </div>
 
-                    <?php elseif ($vista === 'reportes'): ?>
-                        <h1><i class="fa-solid fa-file-contract"></i> Generador de Reportes</h1>
-                        
-                        <div class="block-section report-form-container">
-                            <form method="GET" class="report-filters" id="formReportes">
-                                <input type="hidden" name="vista" value="reportes">
-                                <div class="form-group">
-                                    <label>Colegio:</label>
-                                    <select name="rep_colegio" id="rep_colegio" onchange="this.form.submit()">
-                                        <option value="">Todos los Colegios</option>
-                                        <?php foreach($colegios as $c): ?><option value="<?php echo $c['Id']; ?>" <?php echo $rep_colegio == $c['Id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['Nombre']); ?></option><?php endforeach; ?>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Curso:</label>
-                                    <select name="rep_curso" id="rep_curso" onchange="this.form.submit()">
-                                        <option value="">Todos los Cursos</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Desde:</label>
-                                    <input type="date" name="fecha_ini" value="<?php echo $fecha_ini; ?>" onchange="actualizarReporteConDebounce()">
-                                </div>
-                                <div class="form-group">
-                                    <label>Hasta:</label>
-                                    <input type="date" name="fecha_fin" value="<?php echo $fecha_fin; ?>" onchange="actualizarReporteConDebounce()">
-                                </div>
-                                <div class="form-group">
-                                    <label>Sexo:</label>
-                                    <select name="rep_sexo" onchange="this.form.submit()">
-                                        <option value="">Todos</option>
-                                        <option value="M" <?php echo $rep_sexo == 'M' ? 'selected' : ''; ?>>Hombres</option>
-                                        <option value="F" <?php echo $rep_sexo == 'F' ? 'selected' : ''; ?>>Mujeres</option>
-                                    </select>
-                                </div>
-                            </form>
-                        </div>
+    <header class="main-header">
+        <div class="header-left">
+            <button class="btn-toggle-menu" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="brand-logo">
+                <i class="fa-solid fa-chart-line"></i> NutriData <span style="font-weight:400; color:#666; font-size:1rem; margin-left:5px;">| DAEM</span>
+            </div>
+        </div>
+        <div class="header-user-section">
+            <div class="user-info">
+                <span class="user-name"><?php echo htmlspecialchars($_SESSION['user_nombre']); ?></span>
+                <span class="user-role">Dirección DAEM</span>
+            </div>
+            <a href="logout.php" class="btn-logout" title="Cerrar Sesión"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </header>
 
-                        <div class="block-section">
-                            <div class="actions-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                                <h3>Resultados (<?php echo $total_registros_rep; ?> registros)</h3>
-                                <div style="display:flex; gap:10px;">
-                                    <a href="AdminDAEM/imprimir_reporte.php?<?php echo http_build_query($_GET); ?>" target="_blank" class="btn-create" style="background:#6c757d; text-decoration:none;"><i class="fa-solid fa-print"></i> Imprimir PDF Completo</a>
-                                    <a href="AdminDAEM/exportar_excel.php?<?php echo http_build_query($_GET); ?>" target="_blank" class="btn-create" style="background:#198754;"><i class="fa-solid fa-file-excel"></i> Exportar Excel</a>
-                                </div>
-                            </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <aside class="sidebar" id="mainSidebar">
+        <div class="sidebar-header">
+            <h3 style="color:var(--primary-color); font-size:1.1rem; margin:0;">Panel de Control</h3>
+            <button onclick="toggleSidebar()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="dashboard_admin_daem.php?vista=general" class="nav-item <?php echo $vista=='general'?'active':''; ?>">
+                <i class="fa-solid fa-gauge-high"></i> Visión General
+            </a>
+            <a href="dashboard_admin_daem.php?vista=reportes" class="nav-item <?php echo $vista=='reportes'?'active':''; ?>">
+                <i class="fa-solid fa-file-pdf"></i> Reportes y Exportación
+            </a>
+        </nav>
+    </aside>
 
-                            <div class="table-responsive">
-                                <table style="width: 100%;">
-                                    <thead>
-                                        <tr style="background:#f3f4f6;">
-                                            <th>RUT</th><th>Estudiante</th><th>Sexo</th><th>Edad</th><th>Curso</th><th>Colegio</th><th>IMC</th><th>Diagnóstico</th><th>Fecha</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php if(empty($resultados_reporte)): ?>
-                                            <tr><td colspan="9" style="text-align:center; padding:20px;">No se encontraron datos.</td></tr>
-                                        <?php else: ?>
-                                            <?php foreach($resultados_reporte as $row): ?>
-                                            <tr>
-                                                <td><?php echo $row['Rut']; ?></td>
-                                                <td><?php echo htmlspecialchars($row['Estudiante']); ?></td>
-                                                <td style="text-align:center;"><?php echo $row['Sexo']; ?></td>
-                                                <td style="text-align:center;"><?php echo $row['Edad']; ?></td>
-                                                <td><?php echo htmlspecialchars($row['Curso']); ?></td>
-                                                <td><?php echo htmlspecialchars($row['Colegio']); ?></td>
-                                                <td><strong><?php echo $row['IMC']; ?></strong></td>
-                                                <td>
-                                                    <?php 
-                                                    $d = $row['Diagnostico']; $cls = 'text-dark';
-                                                    if(strpos($d,'Obesidad')!==false) $cls='text-danger';
-                                                    elseif(strpos($d,'Bajo')!==false) $cls='text-warning';
-                                                    elseif(strpos($d,'Sobrepeso')!==false) $cls='text-orange';
-                                                    elseif(strpos($d,'Normal')!==false) $cls='text-success';
-                                                    echo "<span class='$cls'>$d</span>";
-                                                    ?>
-                                                </td>
-                                                <td><?php echo date("d/m/Y", strtotime($row['FechaMedicion'])); ?></td>
-                                            </tr>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <?php if ($total_pags_rep > 1): ?>
-                            <div class="pagination">
-                                <?php 
-                                $rango = 2; $actual = $pag_rep; $total = $total_pags_rep; $param = 'pag_rep';
-                                if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
-                                if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
-                                for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
-                                if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
-                                if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
-                                ?>
-                            </div>
-                            <div style="text-align:center; margin-top:10px; color:#888; font-size:0.8rem;" class="actions-bar">Página <?php echo $actual; ?> de <?php echo $total; ?></div>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-
+    <main class="main-content">
+        <div class="content-container" style="background:transparent; border:none; box-shadow:none; padding:0;">
+            
+            <?php if ($vista === 'general'): ?>
+                <h1><i class="fa-solid fa-chart-line"></i> Monitor Nutricional</h1>
+                <div class="top-filters">
+                    <i class="fa-solid fa-filter" style="color:#666;"></i>
+                    <form style="display:flex; gap:10px; flex-grow:1; flex-wrap:wrap;" method="GET">
+                        <input type="hidden" name="vista" value="general">
+                        <?php if(isset($_GET['ver'])): ?><input type="hidden" name="ver" value="<?php echo htmlspecialchars($_GET['ver']); ?>"><?php endif; ?>
+                        <select name="colegio" onchange="this.form.submit()" style="padding:8px; border:1px solid #ddd; border-radius:4px; flex:1; min-width:150px;">
+                            <option value="">Todos los Colegios</option>
+                            <?php foreach($colegios as $c): ?><option value="<?php echo $c['Id']; ?>" <?php echo $filtro_colegio == $c['Id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['Nombre']); ?></option><?php endforeach; ?>
+                        </select>
+                        <select name="sexo" onchange="this.form.submit()" style="padding:8px; border:1px solid #ddd; border-radius:4px; flex:1; min-width:150px;">
+                            <option value="">Todos los Géneros</option>
+                            <option value="M" <?php echo $filtro_sexo == 'M' ? 'selected' : ''; ?>>Hombres</option>
+                            <option value="F" <?php echo $filtro_sexo == 'F' ? 'selected' : ''; ?>>Mujeres</option>
+                        </select>
+                    </form>
                 </div>
-            </section>
-            <footer class="main-footer">
-                &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
-            </footer>
-        </main>
-    </div>
 
-    <?php if ($vista === 'general'): ?>
+                <div class="kpi-grid">
+                    <div class="kpi-card"><h3>Total Alumnos</h3><div class="value"><?php echo $kpis['total']; ?></div></div>
+                    <div class="kpi-card" style="border-left-color:#198754;"><h3>Promedio IMC</h3><div class="value"><?php echo number_format($kpis['prom_imc'],1); ?></div></div>
+                    <div class="kpi-card" style="border-left-color:#dc3545;"><h3>Riesgo (Obes/Bajo)</h3><div class="value"><?php echo $porcentaje; ?>%</div></div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-card"><h3 style="margin-bottom:15px; color:#444;">Distribución (Porcentaje)</h3><div class="chart-wrapper"><canvas id="grafico1"></canvas></div></div>
+                    <div class="chart-card"><h3 style="margin-bottom:15px; color:#444;">Distribución (Cantidad)</h3><div class="chart-wrapper-bar"><canvas id="grafico2"></canvas></div></div>
+                </div>
+
+                <div class="block-section">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom: 10px;">
+                        <h3><i class="fa-solid fa-bell" style="color: #fd7e14;"></i> Gestión de Alertas</h3>
+                        <div class="filter-tabs">
+                            <a href="<?php echo buildUrl(['ver' => 'pendientes', 'pag' => 1]); ?>" class="<?php echo $filtro_estado === 1 ? 'active' : ''; ?>">Pendientes</a>
+                            <a href="<?php echo buildUrl(['ver' => 'todos', 'pag' => 1]); ?>" class="<?php echo $filtro_estado === null ? 'active' : ''; ?>">Historial Completo</a>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table style="width: 100%;">
+                            <thead><tr><th>Estado</th><th>Alumno</th><th>RUT</th><th>Colegio</th><th>IMC</th><th>Diag.</th><th>Fecha</th><th>Acción</th></tr></thead>
+                            <tbody>
+                                <?php while($row = $stmt_alertas->fetch(PDO::FETCH_ASSOC)): ?>
+                                <tr>
+                                    <td><?php echo $row['Estado']==1 ? '<span class="status-inactive">Pendiente</span>' : '<span class="status-active">Atendida</span>'; ?></td>
+                                    <td><strong><?php echo htmlspecialchars($row['Estudiante']); ?></strong></td>
+                                    <td><?php echo htmlspecialchars($row['Rut']); ?></td>
+                                    <td><small><?php echo htmlspecialchars($row['Establecimiento']); ?></small></td>
+                                    <td><b><?php echo $row['IMC']; ?></b></td>
+                                    <td><?php $colorD='#333'; $d=$row['Diagnostico']; if(strpos($d,'Bajo')!==false)$colorD='#ffc107'; elseif(strpos($d,'Normal')!==false)$colorD='#198754'; elseif(strpos($d,'Sobrepeso')!==false)$colorD='#fd7e14'; elseif(strpos($d,'Obesidad')!==false)$colorD='#dc3545'; echo "<span style='color:$colorD; font-weight:bold;'>$d</span>"; ?></td>
+                                    <td><?php echo date("d/m/Y", strtotime($row['FechaMedicion'])); ?></td>
+                                    <td class="actions"><a href="AdminDAEM/gestionar_alerta.php?id=<?php echo $row['IdAlerta']; ?>" class="btn-action btn-edit"><i class="fa-solid fa-file-pen"></i></a></td>
+                                </tr>
+                                <?php endwhile; ?>
+                                <?php if($stmt_alertas->rowCount() == 0): ?><tr><td colspan="8" style="text-align:center; padding:30px;">No hay alertas.</td></tr><?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <?php if ($total_pags_alertas > 1): ?>
+                    <div class="pagination">
+                        <?php 
+                        $rango = 2; $actual = $pag_general; $total = $total_pags_alertas; $param = 'pag';
+                        if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                        if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                        for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                        if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                        if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                        ?>
+                    </div>
+                    <div style="text-align:center; margin-top:10px; color:#888; font-size:0.8rem;">Página <?php echo $actual; ?> de <?php echo $total; ?></div>
+                    <?php endif; ?>
+                </div>
+
+            <?php elseif ($vista === 'reportes'): ?>
+                <h1><i class="fa-solid fa-file-contract"></i> Generador de Reportes</h1>
+                
+                <div class="block-section report-form-container">
+                    <form method="GET" class="report-filters" id="formReportes">
+                        <input type="hidden" name="vista" value="reportes">
+                        <div class="form-group">
+                            <label>Colegio:</label>
+                            <select name="rep_colegio" id="rep_colegio" onchange="filtrarCursosJS();">
+                                <option value="">Todos los Colegios</option>
+                                <?php foreach($colegios as $c): ?><option value="<?php echo $c['Id']; ?>" <?php echo $rep_colegio == $c['Id'] ? 'selected' : ''; ?>><?php echo htmlspecialchars($c['Nombre']); ?></option><?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Curso / Nivel:</label>
+                            <select name="rep_curso" id="rep_curso" onchange="this.form.submit()">
+                                <option value="">Todos los Niveles</option>
+                                </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Desde:</label>
+                            <input type="date" name="fecha_ini" value="<?php echo $fecha_ini; ?>" onchange="actualizarReporteConDebounce()">
+                        </div>
+                        <div class="form-group">
+                            <label>Hasta:</label>
+                            <input type="date" name="fecha_fin" value="<?php echo $fecha_fin; ?>" onchange="actualizarReporteConDebounce()">
+                        </div>
+                        <div class="form-group">
+                            <label>Sexo:</label>
+                            <select name="rep_sexo" onchange="this.form.submit()">
+                                <option value="">Todos</option>
+                                <option value="M" <?php echo $rep_sexo == 'M' ? 'selected' : ''; ?>>Hombres</option>
+                                <option value="F" <?php echo $rep_sexo == 'F' ? 'selected' : ''; ?>>Mujeres</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="block-section">
+                    <div class="actions-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <h3>Resultados (<?php echo $total_registros_rep; ?> registros)</h3>
+                        <div style="display:flex; gap:10px;">
+                            <a href="AdminDAEM/imprimir_reporte.php?<?php echo http_build_query($_GET); ?>" target="_blank" class="btn-create" style="background:#6c757d; text-decoration:none;"><i class="fa-solid fa-print"></i> Imprimir PDF</a>
+                            <a href="AdminDAEM/exportar_excel.php?<?php echo http_build_query($_GET); ?>" target="_blank" class="btn-create" style="background:#198754;"><i class="fa-solid fa-file-excel"></i> Exportar Excel</a>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>RUT</th><th>Estudiante</th><th>Sexo</th><th>Edad</th><th>Curso</th><th>Colegio</th><th>IMC</th><th>Diagnóstico</th><th>Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if(empty($resultados_reporte)): ?>
+                                    <tr><td colspan="9" style="text-align:center; padding:20px;">No se encontraron datos.</td></tr>
+                                <?php else: ?>
+                                    <?php foreach($resultados_reporte as $row): ?>
+                                    <tr>
+                                        <td><?php echo $row['Rut']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['Estudiante']); ?></td>
+                                        <td style="text-align:center;"><?php echo $row['Sexo']; ?></td>
+                                        <td style="text-align:center;"><?php echo $row['Edad']; ?></td>
+                                        <td><?php echo htmlspecialchars($row['Curso']); ?></td>
+                                        <td><?php echo htmlspecialchars($row['Colegio']); ?></td>
+                                        <td><strong><?php echo $row['IMC']; ?></strong></td>
+                                        <td>
+                                            <?php 
+                                            $d = $row['Diagnostico']; $cls = 'text-dark';
+                                            if(strpos($d,'Obesidad')!==false) $cls='text-danger';
+                                            elseif(strpos($d,'Bajo')!==false) $cls='text-warning';
+                                            elseif(strpos($d,'Sobrepeso')!==false) $cls='text-orange';
+                                            elseif(strpos($d,'Normal')!==false) $cls='text-success';
+                                            echo "<span style='font-weight:bold;' class='$cls'>$d</span>";
+                                            ?>
+                                        </td>
+                                        <td><?php echo date("d/m/Y", strtotime($row['FechaMedicion'])); ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <?php if ($total_pags_rep > 1): ?>
+                    <div class="pagination">
+                        <?php 
+                        $rango = 2; $actual = $pag_rep; $total = $total_pags_rep; $param = 'pag_rep';
+                        if ($actual > 1) echo '<a href="'.buildUrl([$param => $actual - 1]).'" class="page-link">&laquo;</a>';
+                        if ($actual > ($rango + 1)) { echo '<a href="'.buildUrl([$param => 1]).'" class="page-link">1</a>'; if ($actual > ($rango + 2)) echo '<span style="padding:0 5px; color:#666;">...</span>'; }
+                        for ($i = max(1, $actual - $rango); $i <= min($total, $actual + $rango); $i++) { $active = ($i == $actual) ? 'active' : ''; echo '<a href="'.buildUrl([$param => $i]).'" class="page-link '.$active.'">'.$i.'</a>'; }
+                        if ($actual < ($total - $rango)) { if ($actual < ($total - $rango - 1)) echo '<span style="padding:0 5px; color:#666;">...</span>'; echo '<a href="'.buildUrl([$param => $total]).'" class="page-link">'.$total.'</a>'; }
+                        if ($actual < $total) echo '<a href="'.buildUrl([$param => $actual + 1]).'" class="page-link">&raquo;</a>';
+                        ?>
+                    </div>
+                    <div style="text-align:center; margin-top:10px; color:#888; font-size:0.8rem;">Página <?php echo $actual; ?> de <?php echo $total; ?></div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+
+        </div>
+
+        <footer class="main-footer">
+            &copy; <?php echo date("Y"); ?> NutriData - DAEM.
+        </footer>
+    </main>
+
     <script>
+        function toggleSidebar() {
+            document.getElementById('mainSidebar').classList.toggle('active');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+
+        <?php if ($vista === 'general'): ?>
         const labels = <?php echo json_encode($labels); ?>;
         const data = <?php echo json_encode($data); ?>;
         const colores = <?php echo json_encode($colores); ?>;
         new Chart(document.getElementById('grafico1'), { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: colores, borderWidth: 1 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
         new Chart(document.getElementById('grafico2'), { type: 'bar', data: { labels: labels, datasets: [{ label: 'Cantidad', data: data, backgroundColor: colores, borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } } });
-    </script>
-    <?php endif; ?>
+        <?php endif; ?>
 
-    <?php if ($vista === 'reportes'): ?>
-    <script>
+        <?php if ($vista === 'reportes'): ?>
         let timeout;
         function actualizarReporteConDebounce() {
             clearTimeout(timeout);
             timeout = setTimeout(function() { document.getElementById('formReportes').submit(); }, 1000);
         }
+
+        // --- LÓGICA DE FILTRADO AVANZADO (CON GRUPOS VISUALES) ---
         const todosLosCursos = <?php echo json_encode($todos_los_cursos); ?>;
-        const cursoSeleccionado = "<?php echo $rep_curso; ?>";
+        const cursoSeleccionado = "<?php echo $rep_curso ?? ''; ?>";
+
         function filtrarCursosJS() {
             const colegioId = document.getElementById('rep_colegio').value;
             const selectCurso = document.getElementById('rep_curso');
-            selectCurso.innerHTML = '<option value="">Todos los Cursos</option>';
-            const cursosFiltrados = colegioId ? todosLosCursos.filter(c => c.Id_Establecimiento == colegioId) : todosLosCursos;
-            cursosFiltrados.forEach(c => {
-                const option = document.createElement('option');
-                option.value = c.Id;
-                option.textContent = c.Nombre;
-                if(c.Id == cursoSeleccionado) option.selected = true;
-                selectCurso.appendChild(option);
+            
+            // Limpiar y agregar opción por defecto
+            selectCurso.innerHTML = '';
+            let def = document.createElement('option');
+            def.value = ""; 
+            def.textContent = colegioId ? "Todos los Cursos" : "Todos los Niveles";
+            selectCurso.appendChild(def);
+
+            // 1. Crear OptGroups como en la foto
+            const grpPre = document.createElement('optgroup'); grpPre.label = 'Pre-Básica';
+            const grpBas = document.createElement('optgroup'); grpBas.label = 'Básica';
+            const grpMed = document.createElement('optgroup'); grpMed.label = 'Media';
+            const grpOtros = document.createElement('optgroup'); grpOtros.label = 'Otros';
+
+            let itemsParaMostrar = [];
+
+            // 2. Definir qué vamos a mostrar (Niveles o Cursos ID)
+            if (!colegioId) {
+                // MODO: TODOS LOS COLEGIOS -> Agrupar por nombre limpio (Nivel)
+                let nivelesUnicos = new Set();
+                todosLosCursos.forEach(c => {
+                    let nombre = c.Nombre.trim();
+                    // Limpieza: "1° Medio TP" -> "1° Medio", "1° Básico A" -> "1° Básico"
+                    let nivel = nombre.replace(/\s+TP$/i, '').replace(/\s+[A-Z]$/, '');
+                    nivelesUnicos.add(nivel);
+                });
+                
+                // Ordenar para que aparezca Kinder, 1°, 2°...
+                Array.from(nivelesUnicos).sort((a, b) => {
+                    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+                }).forEach(n => {
+                    itemsParaMostrar.push({ val: n, text: n }); 
+                });
+
+            } else {
+                // MODO: COLEGIO ESPECÍFICO -> Mostrar Cursos reales
+                todosLosCursos.filter(c => c.Id_Establecimiento == colegioId).forEach(c => {
+                    itemsParaMostrar.push({ val: c.Id, text: c.Nombre }); 
+                });
+            }
+
+            // 3. Distribuir en los OptGroups
+            let cPre=0, cBas=0, cMed=0, cOtros=0;
+
+            itemsParaMostrar.forEach(item => {
+                let opt = document.createElement('option');
+                opt.value = item.val;
+                opt.textContent = item.text;
+                if(item.val == cursoSeleccionado) opt.selected = true;
+
+                let txt = item.text.toLowerCase();
+                // Lógica de clasificación
+                if(txt.includes('kinder') || txt.includes('pre-kinder')) { 
+                    grpPre.appendChild(opt); cPre++; 
+                } else if(txt.includes('básico') || txt.includes('basico') || txt.includes('básica')) { 
+                    grpBas.appendChild(opt); cBas++; 
+                } else if(txt.includes('medio') || txt.includes('media')) { 
+                    grpMed.appendChild(opt); cMed++; 
+                } else { 
+                    grpOtros.appendChild(opt); cOtros++; 
+                }
             });
+
+            // 4. Agregar OptGroups al Select solo si tienen hijos
+            if(cPre>0) selectCurso.appendChild(grpPre);
+            if(cBas>0) selectCurso.appendChild(grpBas);
+            if(cMed>0) selectCurso.appendChild(grpMed);
+            if(cOtros>0) selectCurso.appendChild(grpOtros);
         }
+
         document.addEventListener('DOMContentLoaded', filtrarCursosJS);
+        <?php endif; ?>
     </script>
-    <?php endif; ?>
 </body>
 </html>

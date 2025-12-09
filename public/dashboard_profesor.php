@@ -14,7 +14,7 @@ $vista = $_GET['vista'] ?? 'cursos';
 $id_curso = $_GET['id_curso'] ?? null;
 $id_estudiante = $_GET['id_estudiante'] ?? null;
 
-// --- CONFIGURACIÓN DE PAGINACIÓN (20 por página) ---
+// --- CONFIGURACIÓN DE PAGINACIÓN ---
 $registros_por_pagina = 20;
 $pagina_actual = isset($_GET['pag']) ? (int)$_GET['pag'] : 1;
 if ($pagina_actual < 1) $pagina_actual = 1;
@@ -31,80 +31,68 @@ function buildUrl($params = []) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard Profesor - NutriData</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docente - NutriData</title>
     <link rel="stylesheet" href="css/styles.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Estilos Paginación */
         .pagination { display: flex; justify-content: center; gap: 5px; margin-top: 25px; flex-wrap: wrap; }
-        .page-link { 
-            padding: 8px 14px; 
-            border: 1px solid #ddd; 
-            background: white; 
-            text-decoration: none; 
-            border-radius: 4px; 
-            color: #333; 
-            font-weight: 500;
-            transition: all 0.2s;
-        }
+        .page-link { padding: 8px 14px; border: 1px solid #ddd; background: white; text-decoration: none; border-radius: 4px; color: #333; font-weight: 500; transition: all 0.2s; }
         .page-link:hover { background-color: #f8f9fa; }
-        .page-link.active { background: #4361ee; color: white; border-color: #4361ee; }
+        .page-link.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
         .page-info { text-align: center; margin-top: 10px; color: #888; font-size: 0.85rem; }
-
-        /* ESTILOS PARA FILAS CLICKEABLES (Igual que Admin BD) */
-        .clickable-row {
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        .clickable-row:hover {
-            background-color: #f1f5f9; /* Color de fondo al pasar el mouse */
-        }
-        .clickable-row td {
-            vertical-align: middle;
-        }
+        .clickable-row { cursor: pointer; transition: background-color 0.2s ease; }
+        .clickable-row:hover { background-color: #f1f5f9; }
+        .clickable-row td { vertical-align: middle; }
     </style>
 </head>
 <body>
 
-<div class="dashboard-wrapper">
+    <header class="main-header">
+        <div class="header-left">
+            <button class="btn-toggle-menu" onclick="toggleSidebar()">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="brand-logo">
+                <i class="fa-solid fa-apple-whole"></i> NutriData <span style="font-weight:400; color:#666; font-size:1rem; margin-left:5px;">| Docente</span>
+            </div>
+        </div>
+        <div class="header-user-section">
+            <div class="user-info">
+                <span class="user-name"><?php echo htmlspecialchars($_SESSION['user_nombre']); ?></span>
+                <span class="user-role">Profesor Encargado</span>
+            </div>
+            <a href="logout.php" class="btn-logout" title="Cerrar Sesión"><i class="fa-solid fa-right-from-bracket"></i></a>
+        </div>
+    </header>
 
-    <aside class="sidebar">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    <aside class="sidebar" id="mainSidebar">
         <div class="sidebar-header">
-            <h2>NutriData</h2>
+            <h3 style="color:var(--primary-color); font-size:1.1rem; margin:0;">Navegación</h3>
+            <button onclick="toggleSidebar()" style="background:none; border:none; cursor:pointer; font-size:1.2rem; color:#666;"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-category">Profesor</div>
-            <a href="dashboard_profesor.php?vista=cursos"
-               class="nav-item <?= ($vista == 'cursos' || $vista == 'estudiantes' || $vista == 'mediciones') ? 'active' : '' ?>">
-               <i class="fa-solid fa-chalkboard-user"></i> Mis Cursos
+            <div class="nav-category">Principal</div>
+            <a href="dashboard_profesor.php?vista=cursos" class="nav-item <?php echo ($vista == 'cursos' || $vista == 'estudiantes' || $vista == 'mediciones') ? 'active' : ''; ?>">
+               <i class="fa-solid fa-chalkboard-user"></i> Mis Cursos Asignados
             </a>
         </nav>
     </aside>
 
     <main class="main-content">
+        <?php
+        if (isset($_SESSION['error'])) {
+            echo '<div class="mensaje error"><i class="fa-solid fa-triangle-exclamation"></i> '.$_SESSION['error'].'</div>';
+            unset($_SESSION['error']);
+        }
+        if (isset($_SESSION['success'])) {
+            echo '<div class="mensaje success"><i class="fa-solid fa-check-circle"></i> '.$_SESSION['success'].'</div>';
+            unset($_SESSION['success']);
+        }
+        ?>
 
-        <header class="header">
-            <div class="header-user">
-                <?= htmlspecialchars($_SESSION['user_nombre']); ?>
-            </div>
-            <a href="logout.php" class="btn-logout">Cerrar Sesión</a>
-        </header>
-
-        <section class="content-body">
-            <div class="content-container">
-
-            <?php
-            // MENSAJES DE ERROR O ÉXITO
-            if (isset($_SESSION['error'])) {
-                echo '<div class="mensaje error">'.$_SESSION['error'].'</div>';
-                unset($_SESSION['error']);
-            }
-            if (isset($_SESSION['success'])) {
-                echo '<div class="mensaje success">'.$_SESSION['success'].'</div>';
-                unset($_SESSION['success']);
-            }
-            ?>
-
+        <div class="content-container">
             <?php
             // ===========================================================
             //                     VISTA 1: MIS CURSOS
@@ -146,10 +134,7 @@ function buildUrl($params = []) {
                 $encontrados = false;
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $encontrados = true;
-                    // Construir URL de destino
                     $url = "dashboard_profesor.php?vista=estudiantes&id_curso=" . $row['Id'];
-                    
-                    // Fila Clickeable
                     echo "<tr class='clickable-row' onclick=\"window.location='$url'\">
                           <td><strong>".htmlspecialchars($row['Nombre'])."</strong></td>
                           <td>".htmlspecialchars($row['Establecimiento'])."</td>
@@ -162,7 +147,6 @@ function buildUrl($params = []) {
 
                 echo "</tbody></table></div>";
 
-                // Paginador Inteligente
                 if ($total_pags > 1) {
                     echo '<div class="pagination">';
                     $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
@@ -175,13 +159,11 @@ function buildUrl($params = []) {
                 }
             }
 
-
             // ===========================================================
             //            VISTA 2: ESTUDIANTES DEL CURSO
             // ===========================================================
             elseif ($vista === 'estudiantes' && $id_curso) {
 
-                // Obtener nombre del curso
                 $stmt_curso = $pdo->prepare("SELECT Nombre FROM Curso WHERE Id = ?");
                 $stmt_curso->execute([$id_curso]);
                 $nombre_curso = $stmt_curso->fetchColumn();
@@ -191,14 +173,12 @@ function buildUrl($params = []) {
                 echo '<a href="dashboard_profesor.php?vista=cursos" class="btn-create" style="background:#6c757d;"><i class="fa-solid fa-arrow-left"></i> Volver a Cursos</a>';
                 echo "</div>";
 
-                // 1. Contar Total Estudiantes
                 $sql_count = "SELECT COUNT(*) FROM Estudiante WHERE Id_Curso = ? AND Estado = 1";
                 $stmt_c = $pdo->prepare($sql_count);
                 $stmt_c->execute([$id_curso]);
                 $total_regs = $stmt_c->fetchColumn();
                 $total_pags = ceil($total_regs / $registros_por_pagina);
 
-                // 2. Obtener Estudiantes Paginados
                 $stmt = $pdo->prepare("
                     SELECT Id, Rut, Nombres, ApellidoPaterno, ApellidoMaterno
                     FROM Estudiante
@@ -221,13 +201,9 @@ function buildUrl($params = []) {
                 $encontrados = false;
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                     $encontrados = true;
-                    // Concatenación segura
                     $nombreFull = $row['Nombres'] . ' ' . $row['ApellidoPaterno'] . ' ' . ($row['ApellidoMaterno'] ?? '');
-                    
-                    // URL destino
                     $url = "dashboard_profesor.php?vista=mediciones&id_estudiante=" . $row['Id'];
 
-                    // Fila Clickeable
                     echo "<tr class='clickable-row' onclick=\"window.location='$url'\">
                           <td>".htmlspecialchars($row['Rut'])."</td>
                           <td>".htmlspecialchars($nombreFull)."</td>
@@ -238,7 +214,6 @@ function buildUrl($params = []) {
                 }
                 echo "</tbody></table></div>";
 
-                // Paginador Inteligente
                 if ($total_pags > 1) {
                     echo '<div class="pagination">';
                     $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
@@ -251,13 +226,11 @@ function buildUrl($params = []) {
                 }
             }
 
-
             // ===========================================================
             //           VISTA 3: MEDICIONES DEL ESTUDIANTE
             // ===========================================================
             elseif ($vista === 'mediciones' && $id_estudiante) {
 
-                // Obtener datos del estudiante
                 $stmt_est = $pdo->prepare("SELECT Nombres, ApellidoPaterno, Id_Curso FROM Estudiante WHERE Id = ?");
                 $stmt_est->execute([$id_estudiante]);
                 $est = $stmt_est->fetch(PDO::FETCH_ASSOC);
@@ -271,21 +244,18 @@ function buildUrl($params = []) {
 
                 echo '<div class="content-header-with-btn">';
                 echo "<h1><i class='fa-solid fa-notes-medical'></i> Historial: $nombre_est</h1>";
-                
                 echo "<div style='display:flex; gap:10px;'>
                         <a href='dashboard_profesor.php?vista=estudiantes&id_curso=$id_curso_volver' class='btn-create' style='background:#6c757d;'><i class='fa-solid fa-arrow-left'></i> Volver</a>
                         <a href='registrar_medicion.php?id_estudiante=$id_estudiante' class='btn-create'><i class='fa-solid fa-plus'></i> Nueva Medición</a>
                       </div>";
                 echo '</div>';
 
-                // 1. Contar Total Mediciones
                 $sql_count = "SELECT COUNT(*) FROM RegistroNutricional WHERE Id_Estudiante = ?";
                 $stmt_c = $pdo->prepare($sql_count);
                 $stmt_c->execute([$id_estudiante]);
                 $total_regs = $stmt_c->fetchColumn();
                 $total_pags = ceil($total_regs / $registros_por_pagina);
 
-                // 2. Obtener Mediciones
                 $stmt = $pdo->prepare("
                     SELECT FechaMedicion as Fecha, Peso, Altura, IMC, Diagnostico, Observaciones
                     FROM RegistroNutricional
@@ -333,7 +303,6 @@ function buildUrl($params = []) {
                 }
                 echo "</tbody></table></div>";
 
-                // Paginador Inteligente
                 if ($total_pags > 1) {
                     echo '<div class="pagination">';
                     $rango = 2; $actual = $pagina_actual; $total = $total_pags; $param = 'pag';
@@ -346,14 +315,18 @@ function buildUrl($params = []) {
                 }
             }
             ?>
-
-            </div>
-        </section>
+        </div>
+        
         <footer class="main-footer">
-            &copy; <?php echo date("Y"); ?> <strong>NutriData</strong> - Departamento de Administración de Educación Municipal (DAEM).
+            &copy; <?php echo date("Y"); ?> NutriData - DAEM.
         </footer>
     </main>
-</div>
 
+    <script>
+        function toggleSidebar() {
+            document.getElementById('mainSidebar').classList.toggle('active');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+    </script>
 </body>
 </html>
